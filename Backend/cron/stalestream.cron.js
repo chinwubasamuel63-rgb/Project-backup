@@ -1,5 +1,5 @@
 import cron from "node-cron";
-import { sweepStaleStreams } from "../services/staleStreamSweeper.service.js";
+import { sweepStaleStreams } from "../services/Stalestreamsweeper.service.js";
 
 // Runs every minute. Cheap query (indexed on status + hostPresenceLastSeen
 // is worth adding if this table grows -- see Stream.js schema indexes) and
