@@ -6,6 +6,7 @@ import {
   createStream,
   getStreams,
   getMyStreams,
+  getUserStreams,
   getStreamById,
   startStream,
   endStream,
@@ -31,6 +32,7 @@ const router = express.Router();
 
 router.get("/", protect, getStreams);
 router.get("/my", protect, getMyStreams);
+router.get("/user/:userId", getUserStreams);
 router.post("/", protect, createStream);
 router.post("/:streamId/start", protect, startStream);
 router.post("/:streamId/join", protect, joinStream);

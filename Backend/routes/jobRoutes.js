@@ -8,6 +8,7 @@ import {
   getJobs,
   getJobById,
   getMyJobs,
+  getUserJobs,
   getProjectJobs,
   updateJob,
   closeJob,
@@ -18,6 +19,7 @@ const router = express.Router();
 
 router.get("/", getJobs);
 router.get("/my/jobs", protect, getMyJobs);
+router.get("/user/:userId", getUserJobs);
 router.get("/project/:projectId", getProjectJobs);
 router.get("/:jobId", getJobById);
 

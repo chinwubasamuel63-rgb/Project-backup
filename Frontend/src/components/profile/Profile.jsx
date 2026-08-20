@@ -10,10 +10,10 @@ import {
   getFollowing,
 } from "../../services/profileService";
 import { createConversation } from "../../services/messageService";
-import { getMyProducts } from "../../services/productService";
+import { getMyProducts, getUserProducts } from "../../services/productService";
 import { getProfileActivity } from "../../services/profileActivityService";
-import { getMyJobs } from "../../services/jobService";
-import { getMyStreams } from "../../services/streamService";
+import { getMyJobs, getUserJobs } from "../../services/jobService";
+import { getMyStreams, getUserStreams } from "../../services/streamService";
 import { getMyProjects, getUserProjects } from "../../services/projectService";
 import "./profile.css";
 
@@ -193,7 +193,7 @@ export default function Profile({ notify }) {
       try {
         setProductsLoading(true);
         const data = userId
-          ? await getMyProducts(userId)
+          ? await getUserProducts(userId)
           : await getMyProducts();
         setProducts(data.products || []);
       } catch (error) {
@@ -210,7 +210,7 @@ export default function Profile({ notify }) {
     const loadActivity = async () => {
       try {
         setActivityLoading(true);
-        const data = await getProfileActivity();
+        const data = await getProfileActivity(userId);
         setActivity(data.activity || []);
       } catch (error) {
         console.error("Activity error:", error);
@@ -226,7 +226,7 @@ export default function Profile({ notify }) {
     const loadJobs = async () => {
       try {
         setJobsLoading(true);
-        const data = userId ? await getMyJobs(userId) : await getMyJobs();
+        const data = userId ? await getUserJobs(userId) : await getMyJobs();
         setJobs(data.jobs || []);
       } catch (err) {
         console.error(err);
@@ -242,7 +242,9 @@ export default function Profile({ notify }) {
     const loadStreams = async () => {
       try {
         setStreamsLoading(true);
-        const data = userId ? await getMyStreams(userId) : await getMyStreams();
+        const data = userId
+          ? await getUserStreams(userId)
+          : await getMyStreams();
         setStreams(data.streams || []);
       } catch (err) {
         console.error("Streams error:", err);

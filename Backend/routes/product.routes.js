@@ -4,6 +4,7 @@ import {
   getProducts,
   getProductById,
   getMyProducts,
+  getUserProducts,
   updateProduct,
   deactivateProduct,
   deleteProduct,
@@ -20,6 +21,7 @@ const router = express.Router();
 router.post("/", protect, checkAccountStatus, createProduct);
 router.get("/", getProducts);
 router.get("/my/products", protect, getMyProducts);
+router.get("/user/:userId", getUserProducts);
 router.get("/:productId/download", protect, downloadProduct);
 router.get("/:productId", getProductById);
 router.patch("/:productId", protect, checkAccountStatus, updateProduct);

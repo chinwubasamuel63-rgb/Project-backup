@@ -431,6 +431,40 @@ export const getMyStreams = async (req, res) => {
   }
 };
 
+export const getUserStreams = async (req, res) => {
+  try {
+    if (!isValidObjectId(req.params.userId)) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Invalid user ID" });
+    }
+
+    const streams = await Stream.find({
+      host: req.params.userId,
+      visibility: "public",
+      status: "started",
+    })
+      .populate("project", "name")
+      .sort({ createdAt: -1 });
+
+    const normalizedStreams = streams.map((stream) => ({
+      ...stream.toObject(),
+      thumbnail: normalizeStreamThumbnail(stream.thumbnail),
+    }));
+
+    res.status(200).json({
+      success: true,
+      count: normalizedStreams.length,
+      streams: normalizedStreams,
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: getSafeErrorMessage(error),
+    });
+  }
+};
+
 export const getStreamById = async (req, res) => {
   try {
     const { streamId } = req.params;

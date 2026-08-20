@@ -79,9 +79,7 @@ export const createProduct = async (req, res) => {
     if (uploadedThumbnail?.public_id) {
       try {
         await cloudinary.uploader.destroy(uploadedThumbnail.public_id);
-      } catch (cleanupError) {
-        ;
-      }
+      } catch (cleanupError) {}
     }
 
     res.status(500).json({
@@ -165,6 +163,25 @@ export const getMyProducts = async (req, res) => {
   }
 };
 
+export const getUserProducts = async (req, res) => {
+  try {
+    if (!mongoose.Types.ObjectId.isValid(req.params.userId)) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Invalid user ID" });
+    }
+
+    const products = await Product.find({
+      seller: req.params.userId,
+      status: "Active",
+    }).sort({ createdAt: -1 });
+
+    res.status(200).json({ success: true, count: products.length, products });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
 /* ---------------- UPDATE PRODUCT ---------------- */
 export const updateProduct = async (req, res) => {
   try {
@@ -234,9 +251,7 @@ export const updateProduct = async (req, res) => {
     ) {
       try {
         await cloudinary.uploader.destroy(oldThumbnailPublicId);
-      } catch (cleanupError) {
-        ;
-      }
+      } catch (cleanupError) {}
     }
 
     res.status(200).json({
@@ -509,9 +524,7 @@ export const uploadProductImages = async (req, res) => {
     for (const publicId of uploadedPublicIds) {
       try {
         await cloudinary.uploader.destroy(publicId);
-      } catch (cleanupError) {
-        ;
-      }
+      } catch (cleanupError) {}
     }
 
     res.status(500).json({

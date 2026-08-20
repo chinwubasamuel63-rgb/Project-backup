@@ -150,6 +150,27 @@ export const getMyJobs = async (req, res) => {
   }
 };
 
+export const getUserJobs = async (req, res) => {
+  try {
+    if (!mongoose.Types.ObjectId.isValid(req.params.userId)) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Invalid user ID" });
+    }
+
+    const jobs = await Job.find({
+      owner: req.params.userId,
+      status: "Open",
+    })
+      .populate("project", "name")
+      .sort({ createdAt: -1 });
+
+    res.status(200).json({ success: true, count: jobs.length, jobs });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
 export const updateJob = async (req, res) => {
   try {
     if (!mongoose.Types.ObjectId.isValid(req.params.jobId)) {

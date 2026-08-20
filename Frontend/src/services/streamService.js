@@ -10,6 +10,12 @@ export const getMyStreams = async () => {
   return data;
 };
 
+export const getUserStreams = async (userId) => {
+  const { data } = await api.get(`/streams/user/${userId}`);
+
+  return data;
+};
+
 export const createStream = async (payload = {}) => {
   const { data } = await api.post("/streams", payload);
   return data;
