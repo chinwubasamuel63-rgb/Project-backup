@@ -89,8 +89,9 @@ export const registerUser = async (req, res) => {
 
     res.cookie("accessToken", accessToken, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
+      secure: true,
       sameSite: "none",
+      path: "/",
       maxAge: 15 * 60 * 1000,
     });
 
@@ -182,8 +183,9 @@ export const loginUser = async (req, res) => {
 
     res.cookie("accessToken", accessToken, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
+      secure: true,
       sameSite: "none",
+      path: "/",
       maxAge: 15 * 60 * 1000,
     });
 
@@ -235,18 +237,18 @@ export const forgotPassword = async (req, res) => {
       email: normalizedEmail,
     });
 
-    if (user.authProvider !== "local") {
-      return res.status(400).json({
-        success: false,
-        message: `This account uses ${user.authProvider} sign in`,
-      });
-    }
-
     if (!user) {
       return res.status(200).json({
         success: true,
         message:
           "If an account exists with that email, a password reset email has been sent",
+      });
+    }
+    
+    if (user.authProvider !== "local") {
+      return res.status(400).json({
+        success: false,
+        message: `This account uses ${user.authProvider} sign in`,
       });
     }
 
@@ -380,8 +382,9 @@ export const refreshAccessToken = async (req, res) => {
 
     res.cookie("accessToken", accessToken, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
+      secure: true,
       sameSite: "none",
+      path: "/",
       maxAge: 15 * 60 * 1000,
     });
 
@@ -410,8 +413,9 @@ export const logoutUser = async (req, res) => {
 
     res.clearCookie("accessToken", {
       httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
+      secure: true,
       sameSite: "none",
+      path: "/",
     });
 
     res.status(200).json({
