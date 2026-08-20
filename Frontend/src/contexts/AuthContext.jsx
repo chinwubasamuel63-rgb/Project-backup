@@ -95,8 +95,6 @@ export default function AuthProvider({ children }) {
       return;
     }
 
-    console.log("Connecting Socket.IO...");
-
     const newSocket = io(SOCKET_URL, {
       withCredentials: true,
 
@@ -116,8 +114,6 @@ export default function AuthProvider({ children }) {
     // CONNECT
     // --------------------------------------------------------
     const handleConnect = () => {
-      console.log("Socket connected:", newSocket.id);
-
       // Join the authenticated user's room.
       newSocket.emit("join", user._id);
     };
@@ -129,18 +125,9 @@ export default function AuthProvider({ children }) {
       console.error("Socket connection error:", error?.message || error);
     };
 
-    // --------------------------------------------------------
-    // DISCONNECT
-    // --------------------------------------------------------
-    const handleDisconnect = (reason) => {
-      console.log("Socket disconnected:", reason);
-    };
-
     newSocket.on("connect", handleConnect);
 
     newSocket.on("connect_error", handleConnectError);
-
-    newSocket.on("disconnect", handleDisconnect);
 
     // ========================================================
     // NOTIFICATIONS
@@ -204,13 +191,9 @@ export default function AuthProvider({ children }) {
     // CLEANUP
     // ========================================================
     return () => {
-      console.log("Cleaning up Socket.IO connection.");
-
       newSocket.off("connect", handleConnect);
 
       newSocket.off("connect_error", handleConnectError);
-
-      newSocket.off("disconnect", handleDisconnect);
 
       newSocket.off("notification", handleNotification);
 
