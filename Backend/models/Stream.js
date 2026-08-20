@@ -45,13 +45,13 @@ const streamSchema = new mongoose.Schema(
 
     status: {
       type: String,
-      enum: ["live", "ended"],
-      default: "live",
+      enum: ["scheduled", "started", "ended"],
+      default: "scheduled",
     },
 
     startedAt: {
       type: Date,
-      default: Date.now,
+      default: null,
     },
 
     endedAt: {
@@ -67,6 +67,13 @@ const streamSchema = new mongoose.Schema(
     totalViewers: {
       type: Number,
       default: 0,
+    },
+
+    // Host presence tracking for reconnection support
+    // Updated whenever host sends heartbeat or performs action
+    hostPresenceLastSeen: {
+      type: Date,
+      default: null,
     },
   },
   {

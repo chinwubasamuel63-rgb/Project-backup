@@ -21,16 +21,9 @@ cron.schedule("0 * * * *", async () => {
     );
 
     if (result.modifiedCount > 0) {
-      console.log(
-        `[CRON] Restored ${result.modifiedCount} suspended users`,
-      );
+      // Intentionally silent; avoids noisy cron output in terminal.
     }
-  } catch (error) {
-    console.error(
-      "[CRON] Suspension expiry error:",
-      error.message,
-    );
-  }
+  } catch (error) {}
 });
 
 export default null;

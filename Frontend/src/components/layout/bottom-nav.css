@@ -1,0 +1,196 @@
+/* ========================================================
+   bottom-nav.css — YouTube-style mobile bottom navigation
+   ======================================================== */
+
+.bottom-nav {
+  display: none;
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 70px;
+  background: linear-gradient(180deg, #0c0f22 0%, #07091a 55%, #04050f 100%);
+  border-top: 1px solid rgba(140, 160, 220, 0.12);
+  z-index: 99997;
+  backdrop-filter: blur(10px);
+}
+
+.bottom-nav-container {
+  display: flex;
+  align-items: center;
+  justify-content: space-around;
+  height: 100%;
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.bottom-nav-container::-webkit-scrollbar {
+  height: 3px;
+}
+
+.bottom-nav-container::-webkit-scrollbar-thumb {
+  background: rgba(140, 160, 220, 0.25);
+  border-radius: 2px;
+}
+
+.bottom-nav-container::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.bottom-nav-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  min-width: 70px;
+  height: 100%;
+  padding: 0 12px;
+  border: none;
+  background: transparent;
+  color: #8a95b6;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  position: relative;
+  flex-shrink: 0;
+}
+
+.bottom-nav-item:hover {
+  color: #c084fc;
+}
+
+.bottom-nav-item.active {
+  color: #c084fc;
+}
+
+.bottom-nav-item.active::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, #a855f7, #34d399);
+  border-radius: 0 0 2px 2px;
+}
+
+.bottom-nav-item.locked {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.bottom-nav-item.locked:hover {
+  color: #8a95b6;
+}
+
+.bottom-nav-icon {
+  font-size: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+}
+
+.bottom-nav-label {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+  white-space: nowrap;
+  text-transform: capitalize;
+  line-height: 1;
+}
+
+.bottom-lock-indicator {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  font-size: 8px;
+}
+
+/* ===================== RESPONSIVE ===================== */
+
+/* TABLET: 768px - 1024px — Show bottom nav */
+@media (max-width: 1024px) {
+  .bottom-nav {
+    display: flex;
+  }
+}
+
+/* MOBILE: < 768px — Show bottom nav */
+@media (max-width: 768px) {
+  .bottom-nav {
+    display: flex;
+  }
+
+  .bottom-nav-container {
+    overflow-x: hidden;
+    justify-content: space-between;
+  }
+
+  .bottom-nav-item {
+    flex: 1 1 0;
+    min-width: 0;
+    padding: 0 4px;
+  }
+
+  .bottom-nav-label {
+    font-size: 8px;
+    letter-spacing: 0;
+  }
+
+  /* Adjust main content to account for bottom nav */
+  .app-body {
+    flex: 1;
+    overflow-y: auto;
+    padding-bottom: 70px;
+  }
+
+  .main-surface {
+    padding-bottom: 0;
+  }
+}
+
+/* SMALL MOBILE: < 480px */
+@media (max-width: 480px) {
+  .bottom-nav {
+    height: 68px;
+  }
+
+  .bottom-nav-container {
+    overflow-x: hidden;
+  }
+
+  .bottom-nav-item {
+    min-width: 0;
+    flex: 1 1 0;
+    gap: 3px;
+    padding: 0 2px;
+  }
+
+  .bottom-nav-icon {
+    font-size: 18px;
+    width: 24px;
+    height: 24px;
+  }
+
+  .bottom-nav-label {
+    font-size: 8px;
+  }
+
+  .app-body {
+    padding-bottom: 68px;
+  }
+}
+
+/* DESKTOP: > 1024px — Hide bottom nav */
+@media (min-width: 1025px) {
+  .bottom-nav {
+    display: none !important;
+  }
+
+  .app-body {
+    padding-bottom: 0 !important;
+  }
+}

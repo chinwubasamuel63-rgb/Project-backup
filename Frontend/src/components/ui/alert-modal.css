@@ -1,0 +1,118 @@
+.alert-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 200000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 12px;
+  background: rgba(2, 3, 10, 0.75);
+  backdrop-filter: blur(6px);
+  animation: alert-modal-fade-in 0.18s ease both;
+}
+
+.alert-modal {
+  display: grid;
+  width: min(440px, calc(100vw - 24px));
+  max-width: 440px;
+  box-sizing: border-box;
+  padding: 32px 36px;
+  border: 1px solid rgba(140, 160, 220, 0.15);
+  border-radius: 20px;
+  background: rgba(13, 17, 34, 0.98);
+  color: #ffffff;
+  box-shadow:
+    0 0 0 1px rgba(248, 113, 113, 0.08),
+    0 40px 80px -20px rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(18px);
+  animation: alert-modal-slide-in 0.2s ease both;
+}
+
+.alert-modal h2,
+.alert-modal p {
+  margin: 0;
+  text-align: center;
+}
+
+.alert-modal h2 {
+  margin-bottom: 12px;
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.alert-modal p {
+  margin-bottom: 28px;
+  color: #cbd5e1;
+  font-size: 13.5px;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+.alert-modal-input {
+  width: 100%;
+  box-sizing: border-box;
+  margin-bottom: 22px;
+  border: 1px solid rgba(140, 160, 220, 0.3);
+  border-radius: 8px;
+  padding: 10px 12px;
+  background: rgba(255, 255, 255, 0.06);
+  color: inherit;
+  font: inherit;
+}
+
+.alert-modal-actions {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+}
+
+.alert-modal-button {
+  flex: 1;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  padding: 10px 20px;
+  background: rgba(255, 255, 255, 0.08);
+  color: #cbd5e1;
+  cursor: pointer;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  transition:
+    background 0.16s ease,
+    border-color 0.16s ease,
+    transform 0.16s ease;
+}
+
+.alert-modal-button:hover {
+  background: rgba(255, 255, 255, 0.14);
+}
+
+.alert-modal-confirm-button {
+  border-color: rgba(248, 113, 113, 0.28);
+  background: rgba(248, 113, 113, 0.16);
+  color: #fecaca;
+}
+
+.alert-modal-confirm-button:hover {
+  background: rgba(248, 113, 113, 0.25);
+}
+
+@keyframes alert-modal-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes alert-modal-slide-in {
+  from {
+    opacity: 0;
+    transform: translateY(-12px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}

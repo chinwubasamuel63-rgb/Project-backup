@@ -1,11 +1,13 @@
 import { useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { createProject } from "../../services/projectService";
+import AlertModal from "../../components/ui/AlertModal";
 import "./project.css";
 
 const CreateProject = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
+  const [alertMessage, setAlertMessage] = useState("");
   const [techInput, setTechInput] = useState("");
 
   const [formData, setFormData] = useState({
@@ -59,7 +61,7 @@ const CreateProject = () => {
     e.preventDefault();
 
     if (!formData.name.trim()) {
-      alert("Project name is required");
+      setAlertMessage("Project name is required");
       return;
     }
 
@@ -97,7 +99,9 @@ const CreateProject = () => {
     } catch (error) {
       console.error(error);
 
-      alert(error.response?.data?.message || "Failed to create project");
+      setAlertMessage(
+        error.response?.data?.message || "Failed to create project",
+      );
     } finally {
       setLoading(false);
     }
@@ -132,6 +136,7 @@ const CreateProject = () => {
 
   return (
     <div className="cp-page">
+      <AlertModal message={alertMessage} onClose={() => setAlertMessage("")} />
       {/* Top bar */}
       <div className="cp-topbar">
         <div>
@@ -411,6 +416,14 @@ const CreateProject = () => {
             </p>
 
             <div className="cp-preview-card">
+              {coverPreview ? (
+                <img
+                  src={coverPreview}
+                  alt="Project cover preview"
+                  className="cp-preview-cover"
+                />
+              ) : null}
+
               {/* Project icon placeholder */}
               <div className="cp-preview-icon">
                 {logoPreview ? (

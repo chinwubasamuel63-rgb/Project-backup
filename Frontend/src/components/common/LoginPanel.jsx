@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import { Icon } from "./Icon";
 import { useAuth } from "../../hooks/useAuth";
 import { Link, useNavigate } from "react-router-dom";
@@ -20,9 +20,8 @@ export function LoginPanel() {
   const [keepSignedIn, setKeepSignedIn] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
-  const [success, setSuccess] = useState("");
   const navigate = useNavigate();
-  const API_URL = "http://localhost:5000/api";
+  const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -34,7 +33,7 @@ export function LoginPanel() {
       const user = await login(loginData.email, loginData.password);
 
       if (user.role === "admin") {
-        navigate("/admin-dashboard");
+        navigate("/admin");
       } else if (user.role === "instructor") {
         navigate("/instructor");
       } else {
@@ -69,7 +68,7 @@ export function LoginPanel() {
       });
 
       if (user.role === "admin") {
-        navigate("/admin-dashboard");
+        navigate("/admin");
       } else if (user.role === "instructor") {
         navigate("/instructor");
       } else {
@@ -336,12 +335,20 @@ export function LoginPanel() {
               <span>OR</span>
             </div>
 
-            <button type="button" className="oauth-btn" onClick={handleGithubLogin}>
+            <button
+              type="button"
+              className="oauth-btn"
+              onClick={handleGithubLogin}
+            >
               <Icon name="github" size={18} />
               <span>Continue with GitHub</span>
             </button>
 
-            <button type="button" className="oauth-btn" onClick={handleGoogleLogin}>
+            <button
+              type="button"
+              className="oauth-btn"
+              onClick={handleGoogleLogin}
+            >
               <Icon name="google" size={18} />
               <span>Continue with Google</span>
             </button>

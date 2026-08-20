@@ -15,6 +15,7 @@ import notificationRoutes from "./routes/notificationRoutes.js";
 import supportRoutes from "./routes/supportRoutes.js";
 import adminRoutes from "./routes/adminRoutes.js";
 import streamRoutes from "./routes/streamRoutes.js";
+import livekitWebhookRoutes from "./routes/livekitWebhook.routes.js";
 import jobRoutes from "./routes/jobRoutes.js";
 import applicationRoutes from "./routes/application.routes.js";
 import productRoutes from "./routes/product.routes.js";
@@ -32,6 +33,7 @@ import "./cron/index.js";
 import auditRoutes from "./routes/admin/audit.routes.js";
 import uploadRoutes from "./routes/upload.routes.js";
 import userProfileRoutes from "./routes/userProfile.routes.js";
+import profileActivityRoutes from "./routes/profileActivity.routes.js";
 import { errorHandler } from "./middleware/errorMiddleware.js";
 
 dotenv.config();
@@ -48,6 +50,13 @@ app.use(
     credentials: true,
   }),
 );
+
+// LiveKit webhooks MUST be mounted before express.json(). LiveKit signs the
+// raw request body, and this route uses express.raw() internally to receive
+// it unparsed -- if express.json() runs first, the body arrives already
+// parsed into an object and signature verification will always fail.
+app.use("/api/webhooks/livekit", livekitWebhookRoutes);
+
 app.use(express.json());
 app.use(passport.initialize());
 app.use(express.urlencoded({ extended: true }));
@@ -88,6 +97,7 @@ app.use("/api/admin/audit-logs", auditRoutes);
 app.use("/api/uploads", uploadRoutes);
 app.use("/api/profile", userProfileRoutes);
 app.use("/api/project-activity", projectActivityRoutes);
+app.use("/api/profile/activity", profileActivityRoutes);
 app.use(errorHandler);
 
 const PORT = process.env.PORT || 5000;

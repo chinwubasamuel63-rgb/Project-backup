@@ -115,7 +115,7 @@ export const createProject = async (req, res) => {
       project,
     });
   } catch (error) {
-    console.error("CREATE PROJECT ERROR:", error);
+    ;
 
     res.status(500).json({
       success: false,
@@ -367,7 +367,7 @@ export const updateProject = async (req, res) => {
       project,
     });
   } catch (error) {
-    console.error("UPDATE PROJECT ERROR:", error);
+    ;
 
     res.status(500).json({
       success: false,
@@ -699,7 +699,7 @@ export const uploadProjectImages = async (req, res) => {
       try {
         await cloudinary.uploader.destroy(publicId);
       } catch (cleanupError) {
-        console.error("Cloudinary cleanup failed:", cleanupError.message);
+        ;
       }
     }
 
@@ -800,9 +800,10 @@ export const getMyProjects = async (req, res) => {
         { coOwners: req.user._id },
       ],
     })
-      .populate("owner", "name username")
-      .populate("members", "name username")
-      .populate("coOwners", "name username");
+      .populate("owner", "name username avatar")
+      .populate("members", "name username avatar")
+      .populate("coOwners", "name username avatar")
+      .sort({ createdAt: -1 });
 
     res.status(200).json({
       success: true,

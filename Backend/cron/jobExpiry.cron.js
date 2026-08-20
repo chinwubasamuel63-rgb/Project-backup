@@ -19,16 +19,9 @@ cron.schedule("0 * * * *", async () => {
     );
 
     if (result.modifiedCount > 0) {
-      console.log(
-        `[CRON] Closed ${result.modifiedCount} expired jobs`,
-      );
+      // Intentionally silent; avoids noisy cron output in terminal.
     }
-  } catch (error) {
-    console.error(
-      "[CRON] Job expiration error:",
-      error.message,
-    );
-  }
+  } catch (error) {}
 });
 
 export default null;

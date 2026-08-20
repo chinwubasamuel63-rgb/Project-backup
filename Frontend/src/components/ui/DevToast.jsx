@@ -14,9 +14,9 @@ export default function DevToast({ message, onClose }) {
   if (!message) return null;
 
   return (
-    <div className="dev-toast">
-      <span>OK</span>
-      {message}
+    <div className="dev-toast" role="status" aria-live="polite">
+      <span className="dev-toast-indicator" aria-hidden="true" />
+      <span className="dev-toast-message">{message}</span>
     </div>
   );
 }

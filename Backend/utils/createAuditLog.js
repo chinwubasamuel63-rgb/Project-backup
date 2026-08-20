@@ -18,7 +18,7 @@ const createAuditLog = async ({
       details,
     });
   } catch (error) {
-    console.error("Audit log error:", error.message);
+    throw new Error("Audit log could not be written");
   }
 };
 

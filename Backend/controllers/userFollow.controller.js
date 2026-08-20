@@ -106,7 +106,7 @@ export const getFollowers = async (req, res) => {
   try {
     const user = await User.findById(req.params.userId).populate(
       "followers",
-      "username profilePicture role",
+      "username avatar role",
     );
 
     if (!user) {
@@ -133,7 +133,7 @@ export const getFollowing = async (req, res) => {
   try {
     const user = await User.findById(req.params.userId).populate(
       "following",
-      "username profilePicture role",
+      "username avatar role",
     );
 
     if (!user) {

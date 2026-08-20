@@ -9,7 +9,14 @@ export default function RoleRoute({ allowedRoles, children }) {
   }
 
   if (!allowedRoles.includes(user.role)) {
-    return <Navigate to="/dashboard" replace />;
+    const roleHome =
+      {
+        admin: "/admin",
+        instructor: "/instructor",
+        student: "/dashboard",
+      }[user.role] || "/dashboard";
+
+    return <Navigate to={roleHome} replace />;
   }
 
   return children;

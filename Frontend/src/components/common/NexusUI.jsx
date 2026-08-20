@@ -1,4 +1,3 @@
-import React from "react";
 import { Skyline } from "./Skyline";
 import { GroundBeams } from "./GroundBeams";
 import { ParticleField } from "./ParticleField";

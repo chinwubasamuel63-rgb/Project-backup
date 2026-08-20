@@ -1,4 +1,3 @@
-import React from "react";
 import { HEX_NODES } from "./data/hexNodes.data";
 import { HexNode } from "./HexNode";
 

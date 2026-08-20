@@ -80,7 +80,7 @@ export const createProduct = async (req, res) => {
       try {
         await cloudinary.uploader.destroy(uploadedThumbnail.public_id);
       } catch (cleanupError) {
-        console.error("Cloudinary cleanup failed:", cleanupError.message);
+        ;
       }
     }
 
@@ -235,7 +235,7 @@ export const updateProduct = async (req, res) => {
       try {
         await cloudinary.uploader.destroy(oldThumbnailPublicId);
       } catch (cleanupError) {
-        console.error("Old thumbnail cleanup failed:", cleanupError.message);
+        ;
       }
     }
 
@@ -510,7 +510,7 @@ export const uploadProductImages = async (req, res) => {
       try {
         await cloudinary.uploader.destroy(publicId);
       } catch (cleanupError) {
-        console.error("Cloudinary cleanup failed:", cleanupError.message);
+        ;
       }
     }
 

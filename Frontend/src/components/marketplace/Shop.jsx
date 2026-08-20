@@ -4,7 +4,7 @@ import { COLORS } from "../../data/colors";
 /**
  * Shop Component - Browse and purchase services
  */
-export default function Shop({ setPaymentOpen, notify }) {
+export default function Shop({ setPaymentOpen }) {
   const [tab, setTab] = useState("All Work");
   const tabs = ["All Work", "Coding Scripts", "Courses"];
   const products = [

@@ -9,7 +9,6 @@ import {
   updateProject,
   uploadProjectImages,
   deleteProjectImage,
-  deleteProject,
 } from "../../services/projectService";
 
 const EditProject = () => {
@@ -31,14 +30,12 @@ const EditProject = () => {
   const [coverImage, setCoverImage] = useState(null);
   const [coverPreview, setCoverPreview] = useState("");
   const [removeCoverImage, setRemoveCoverImage] = useState(false);
-  const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const [deleting, setDeleting] = useState(false);
-  const [showMenu, setShowMenu] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
 
   const coverInputRef = useRef(null);
 
   // snapshot of server values — used by Discard to reset without re-fetching
-  const originalData = useRef(null);
+  const [originalData, setOriginalData] = useState(null);
 
   const [formData, setFormData] = useState({
     name: "",
@@ -52,14 +49,7 @@ const EditProject = () => {
     lookingForTalent: false,
   });
 
-  useEffect(() => {
-    if (authLoading) return;
-    if (!user) return;
-
-    loadProject();
-  }, [projectId, user, authLoading]);
-
-  const loadProject = async () => {
+  const loadProject = useCallback(async () => {
     try {
       setLoading(true);
 
@@ -79,7 +69,7 @@ const EditProject = () => {
         lookingForTalent: data.project.lookingForTalent || false,
       };
 
-      originalData.current = snapshot;
+      setOriginalData(snapshot);
 
       setFormData(snapshot);
     } catch (error) {
@@ -88,7 +78,17 @@ const EditProject = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [projectId]);
+
+  useEffect(() => {
+    if (authLoading || !user) return;
+
+    const timerId = window.setTimeout(() => {
+      void loadProject();
+    }, 0);
+
+    return () => window.clearTimeout(timerId);
+  }, [authLoading, loadProject, user]);
 
   const isOwner =
     user &&
@@ -105,12 +105,12 @@ const EditProject = () => {
   };
 
   const handleDiscard = useCallback(() => {
-    if (!originalData.current) {
+    if (!originalData) {
       navigate(`/projects/${projectId}`);
       return;
     }
     // reset form to server snapshot
-    setFormData({ ...originalData.current });
+    setFormData({ ...originalData });
     // clear any pending logo/cover changes
     setLogo(null);
     setLogoPreview("");
@@ -120,6 +120,32 @@ const EditProject = () => {
     setRemoveCoverImage(false);
     setTechInput("");
   }, [originalData, projectId, navigate]);
+
+  // Check if form has changes
+  const hasFormChanges = useCallback(() => {
+    if (!originalData) return false;
+
+    // Check each form field
+    for (const key in originalData) {
+      if (key === "technologies") {
+        // Compare arrays
+        const original = originalData[key] || [];
+        const current = formData[key] || [];
+        if (original.length !== current.length) return true;
+        for (let i = 0; i < original.length; i++) {
+          if (original[i] !== current[i]) return true;
+        }
+      } else if (originalData[key] !== formData[key]) {
+        return true;
+      }
+    }
+
+    return false;
+  }, [formData, originalData]);
+
+  // Check if there are any pending changes (form or media)
+  const hasChanges =
+    hasFormChanges() || logo || removeLogo || coverImage || removeCoverImage;
 
   const addTechnology = () => {
     const value = techInput.trim();
@@ -273,21 +299,6 @@ const EditProject = () => {
     }
   };
 
-  const handleDeleteProject = async () => {
-    try {
-      setDeleting(true);
-
-      await deleteProject(project._id);
-
-      navigate("/projects");
-    } catch (error) {
-      console.error(error);
-    } finally {
-      setDeleting(false);
-      setShowDeleteModal(false);
-    }
-  };
-
   /* ── guard states ── */
 
   if (authLoading) {
@@ -308,8 +319,8 @@ const EditProject = () => {
 
   if (!project) {
     return (
-      <div className="ep-page">
-        <div className="ep-state-card">Project not found.</div>
+      <div className="page-wrap">
+        <div className="glass-card">Project not found.</div>
       </div>
     );
   }
@@ -361,13 +372,15 @@ const EditProject = () => {
           </button>
 
           <div className="ep-topbar-right">
-            <button
-              type="button"
-              className="ep-btn-ghost"
-              onClick={handleDiscard}
-            >
-              Discard
-            </button>
+            {hasChanges && (
+              <button
+                type="button"
+                className="ep-btn-ghost"
+                onClick={handleDiscard}
+              >
+                Discard
+              </button>
+            )}
             <button type="submit" className="ep-btn-primary" disabled={saving}>
               {saving ? (
                 <>
@@ -964,14 +977,11 @@ const EditProject = () => {
               </div>
 
               <button
-                className="ep-btn-danger"
                 type="button"
-                onClick={() => {
-                  setShowDeleteModal(true);
-                  setShowMenu(false);
-                }}
+                className="ep-btn-danger"
+                onClick={() => setConfirmDelete(true)}
               >
-                🗑️ Delete Project
+                Delete Project
               </button>
             </div>
           </section>
@@ -979,32 +989,33 @@ const EditProject = () => {
       </form>
 
       {/* ── Delete confirmation modal ── */}
-      {showDeleteModal && (
-        <div className="modal-overlay">
-          <div className="glass-card delete-modal">
-            <h2>Delete Project</h2>
-
-            <p>
-              Are you sure you want to delete
-              <strong> {project.name}</strong>? This action cannot be undone.
+      {confirmDelete && (
+        <div
+          className="ep-modal-overlay"
+          onClick={() => setConfirmDelete(false)}
+        >
+          <div className="ep-modal-card" onClick={(e) => e.stopPropagation()}>
+            <div className="ep-modal-icon">🗑️</div>
+            <h2 className="ep-modal-title">Delete Project</h2>
+            <p className="ep-modal-body">
+              Are you sure you want to delete{" "}
+              <strong>{formData.name || "this project"}</strong>? This action
+              cannot be undone.
             </p>
-
-            <div className="modal-actions">
+            <div className="ep-modal-actions">
               <button
                 type="button"
-                className="ep-modal-cancel"
-                onClick={() => setShowDeleteModal(false)}
+                className="ep-btn-ghost"
+                onClick={() => setConfirmDelete(false)}
               >
                 Cancel
               </button>
-
               <button
                 type="button"
-                className="ep-modal-delete"
-                onClick={handleDeleteProject}
-                disabled={deleting}
+                className="ep-btn-danger-solid"
+                onClick={() => navigate(`/projects`)}
               >
-                {deleting ? "Deleting..." : "Delete Project"}
+                Delete Project
               </button>
             </div>
           </div>

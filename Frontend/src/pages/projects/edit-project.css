@@ -117,8 +117,7 @@
 
 /* ── main body ── */
 .ep-body {
-  /* max-width: 1100px; */
-  padding: 36px 36px 80px;
+  padding: 36px 40px 80px;
   display: flex;
   flex-direction: column;
   gap: 20px;
@@ -775,6 +774,112 @@
   border-color: rgba(248, 113, 113, 0.7);
 }
 
+/* ── delete confirmation modal ── */
+.ep-modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  background: rgba(2, 3, 10, 0.75);
+  backdrop-filter: blur(6px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  animation: ep-modal-fade-in 0.18s ease both;
+}
+
+@keyframes ep-modal-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.ep-modal-card {
+  background: rgba(13, 17, 34, 0.98);
+  border: 1px solid rgba(140, 160, 220, 0.15);
+  border-radius: 20px;
+  padding: 40px 36px 32px;
+  max-width: 440px;
+  width: 100%;
+  text-align: center;
+  box-shadow:
+    0 0 0 1px rgba(248, 113, 113, 0.08),
+    0 40px 80px -20px rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(18px);
+  animation: ep-modal-slide-in 0.2s ease both;
+}
+
+@keyframes ep-modal-slide-in {
+  from {
+    opacity: 0;
+    transform: translateY(-12px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.ep-modal-icon {
+  font-size: 44px;
+  margin-bottom: 16px;
+  line-height: 1;
+}
+
+.ep-modal-title {
+  font-size: 20px;
+  font-weight: 700;
+  color: #ffffff;
+  margin: 0 0 12px;
+}
+
+.ep-modal-body {
+  font-size: 13.5px;
+  color: #8a95b6;
+  line-height: 1.7;
+  margin: 0 0 28px;
+}
+
+.ep-modal-body strong {
+  color: #e8edf7;
+  font-weight: 600;
+}
+
+.ep-modal-actions {
+  display: flex;
+  flex-direction: row;
+  gap: 12px;
+  justify-content: center;
+}
+
+.ep-modal-actions .ep-btn-ghost {
+  flex: 1;
+  height: 44px;
+  justify-content: center;
+}
+
+.ep-btn-danger-solid {
+  flex: 1;
+  height: 44px;
+  background: rgba(248, 113, 113, 0.15);
+  border: 1px solid rgba(248, 113, 113, 0.5);
+  border-radius: 11px;
+  color: #fca5a5;
+  font-size: 13.5px;
+  font-weight: 700;
+  cursor: pointer;
+  transition:
+    background 0.16s,
+    border-color 0.16s;
+}
+.ep-btn-danger-solid:hover {
+  background: rgba(248, 113, 113, 0.28);
+  border-color: rgba(248, 113, 113, 0.8);
+}
+
 /* ── spinner ── */
 .ep-spinner {
   display: inline-block;
@@ -792,76 +897,6 @@
   height: 11px;
 }
 
-.modal-overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(5, 8, 20, 0.75);
-  backdrop-filter: blur(10px);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  z-index: 9999;
-}
-
-.delete-modal {
-  width: 100%;
-  max-width: 430px;
-  padding: 28px;
-  border-radius: 24px;
-}
-
-.delete-modal h2 {
-  margin: 0 0 14px;
-  font-size: 1.4rem;
-}
-
-.delete-modal p {
-  color: #9aa4bf;
-  line-height: 1.6;
-}
-
-.modal-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 12px;
-  margin-top: 24px;
-}
-
-.ep-modal-cancel {
-  border: none;
-  background: rgba(255, 255, 255, 0.06);
-  color: #cbd5e1;
-  padding: 12px 18px;
-  border-radius: 12px;
-  cursor: pointer;
-  transition: 0.2s;
-}
-
-.ep-modal-cancel:hover {
-  background: rgba(255, 255, 255, 0.12);
-}
-
-.ep-modal-delete {
-  border: none;
-  background: linear-gradient(135deg, #ef4444, #dc2626);
-  color: white;
-  padding: 12px 18px;
-  border-radius: 12px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: 0.2s;
-}
-
-.ep-modal-delete:hover:not(:disabled) {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 24px rgba(239, 68, 68, 0.35);
-}
-
-.ep-modal-delete:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-
 @keyframes ep-spin {
   to {
     transform: rotate(360deg);
@@ -869,43 +904,355 @@
 }
 
 /* ── responsive ── */
-@media (max-width: 680px) {
+
+/* Tablet: 1024px and below */
+@media (max-width: 1024px) {
   .ep-topbar {
-    padding: 12px 16px;
+    padding: 12px 24px;
+    gap: 12px;
   }
+
+  .ep-body {
+    padding: 28px 24px 72px;
+  }
+
+  .ep-section {
+    padding: 24px 22px;
+  }
+
+  .ep-field-grid {
+    grid-template-columns: 1fr 1fr;
+    gap: 14px 20px;
+  }
+
+  .ep-btn-primary {
+    padding: 0 18px;
+    height: 38px;
+    font-size: 13px;
+  }
+
+  .ep-cover-canvas {
+    height: 240px;
+  }
+
+  .ep-logo-badge {
+    width: 60px;
+    height: 60px;
+    bottom: -16px;
+    left: 20px;
+  }
+
+  .ep-logo-initial {
+    font-size: 22px;
+  }
+
+  .ep-collab-grid {
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+
+  .ep-collab-card {
+    padding: 14px 16px;
+    gap: 12px;
+  }
+
+  .ep-gallery-grid {
+    grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+    gap: 10px;
+  }
+
+  .ep-branding-actions {
+    flex-direction: row;
+  }
+
+  .ep-branding-col {
+    padding: 14px 16px;
+  }
+
+  .ep-branding-divider {
+    width: 1px;
+    height: auto;
+  }
+
+  .ep-danger-row {
+    gap: 16px;
+  }
+}
+
+/* Tablet: 768px and below */
+@media (max-width: 768px) {
+  .ep-topbar {
+    padding: 12px 18px;
+    gap: 8px;
+  }
+
+  .ep-topbar-right {
+    gap: 6px;
+  }
+
+  .ep-btn-back,
+  .ep-btn-ghost {
+    height: 36px;
+    padding: 0 12px;
+    font-size: 12px;
+  }
+
+  .ep-btn-primary {
+    height: 36px;
+    padding: 0 14px;
+    font-size: 12px;
+    gap: 5px;
+  }
+
   .ep-body {
     padding: 20px 16px 60px;
   }
+
   .ep-section {
-    padding: 20px 18px;
+    padding: 20px 16px;
+    border-radius: 14px;
   }
+
+  .ep-section-emoji {
+    font-size: 18px;
+  }
+
+  .ep-section-title {
+    font-size: 14px;
+  }
+
+  .ep-section-sub {
+    font-size: 11px;
+  }
+
   .ep-field-grid {
     grid-template-columns: 1fr;
+    gap: 12px;
   }
-  .ep-field-full {
-    grid-column: 1;
+
+  .ep-field {
+    gap: 6px;
   }
-  .ep-collab-grid {
-    grid-template-columns: 1fr;
+
+  .ep-label {
+    font-size: 11px;
   }
+
+  .ep-input,
+  .ep-textarea,
+  .ep-select {
+    font-size: 13px;
+    border-radius: 8px;
+  }
+
+  .ep-input {
+    height: 40px;
+    padding: 0 12px;
+  }
+
+  .ep-textarea {
+    padding: 10px 12px;
+  }
+
+  .ep-tech-row {
+    gap: 8px;
+  }
+
+  .ep-tech-row .ep-input {
+    height: 40px;
+  }
+
+  .ep-btn-add {
+    height: 40px;
+    padding: 0 14px;
+    font-size: 12px;
+  }
+
+  .ep-chip {
+    padding: 4px 8px;
+    font-size: 11.5px;
+  }
+
+  .ep-cover-canvas {
+    height: 180px;
+    border-radius: 10px;
+    margin-bottom: 12px;
+  }
+
+  .ep-logo-badge {
+    width: 52px;
+    height: 52px;
+    bottom: -14px;
+    left: 16px;
+    border-radius: 10px;
+    border-width: 2px;
+  }
+
+  .ep-logo-initial {
+    font-size: 18px;
+  }
+
   .ep-branding-actions {
     flex-direction: column;
+    gap: 0;
+    border-radius: 10px;
   }
+
+  .ep-branding-col {
+    padding: 14px 14px;
+  }
+
   .ep-branding-divider {
     width: 100%;
     height: 1px;
   }
+
+  .ep-btn-upload,
+  .ep-btn-remove {
+    height: 34px;
+    padding: 0 12px;
+    font-size: 11.5px;
+    border-radius: 8px;
+  }
+
+  .ep-collab-grid {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  .ep-collab-card {
+    padding: 12px 14px;
+    gap: 12px;
+    border-radius: 11px;
+  }
+
+  .ep-collab-check {
+    width: 20px;
+    height: 20px;
+    border-radius: 5px;
+  }
+
+  .ep-collab-icon {
+    font-size: 20px;
+  }
+
+  .ep-collab-title {
+    font-size: 12.5px;
+  }
+
+  .ep-collab-desc {
+    font-size: 11px;
+  }
+
+  .ep-gallery-grid {
+    grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+    gap: 8px;
+  }
+
+  .ep-gallery-item {
+    border-radius: 9px;
+  }
+
+  .ep-gallery-upload {
+    border-radius: 9px;
+    font-size: 11.5px;
+  }
+
+  .ep-danger-section {
+    border-radius: 14px;
+  }
+
   .ep-danger-row {
     flex-direction: column;
     align-items: flex-start;
+    gap: 12px;
+    padding: 14px 14px;
+    border-radius: 10px;
+  }
+
+  .ep-danger-action-title {
+    font-size: 12.5px;
+  }
+
+  .ep-danger-action-desc {
+    font-size: 11px;
+  }
+
+  .ep-btn-danger {
+    height: 36px;
+    padding: 0 12px;
+    font-size: 12px;
+    border-radius: 8px;
+    align-self: flex-start;
+  }
+
+  .ep-modal-card {
+    padding: 32px 24px 24px;
+    border-radius: 16px;
+  }
+
+  .ep-modal-icon {
+    font-size: 40px;
+    margin-bottom: 12px;
+  }
+
+  .ep-modal-title {
+    font-size: 18px;
+  }
+
+  .ep-modal-body {
+    font-size: 12.5px;
+    margin-bottom: 20px;
+  }
+
+  .ep-modal-actions {
+    gap: 10px;
+  }
+
+  .ep-modal-actions .ep-btn-ghost,
+  .ep-btn-danger-solid {
+    height: 40px;
+    font-size: 12px;
   }
 }
 
-@media (max-width: 900px) {
-  .ep-body {
-    padding: 28px 24px 72px;
+/* Mobile: 680px and below */
+@media (max-width: 680px) {
+  .ep-topbar {
+    padding: 10px 12px;
   }
-  .ep-cover-canvas {
-    height: 220px;
+
+  .ep-body {
+    padding: 16px 12px 50px;
+  }
+
+  .ep-section {
+    padding: 16px 14px;
+  }
+
+  .ep-field-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .ep-field-full {
+    grid-column: 1;
+  }
+
+  .ep-collab-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .ep-branding-actions {
+    flex-direction: column;
+  }
+
+  .ep-branding-divider {
+    width: 100%;
+    height: 1px;
+  }
+
+  .ep-danger-row {
+    flex-direction: column;
+    align-items: flex-start;
   }
 }

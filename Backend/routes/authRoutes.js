@@ -70,7 +70,7 @@ router.get(
 
       res.redirect(`${process.env.CLIENT_URL}/oauth-success`);
     } catch (error) {
-      console.error("GitHub OAuth error:", error);
+      ;
 
       res.redirect(`${process.env.CLIENT_URL}/login`);
     }

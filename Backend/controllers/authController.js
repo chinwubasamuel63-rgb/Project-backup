@@ -72,7 +72,7 @@ export const registerUser = async (req, res) => {
         html: welcomeEmail(user.username),
       });
     } catch (error) {
-      console.error("Welcome email failed:", error.message);
+      ;
     }
     // AUTO LOGIN AFTER REGISTER
     const accessToken = generateAccessToken(user._id);

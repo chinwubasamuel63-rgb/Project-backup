@@ -24,7 +24,7 @@ export default function OAuthSuccess() {
 
         switch (user.role) {
           case "admin":
-            navigate("/admin-dashboard", {
+            navigate("/admin", {
               replace: true,
             });
             break;

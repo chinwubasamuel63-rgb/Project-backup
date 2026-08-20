@@ -1,0 +1,298 @@
+/* ===========================================================
+   supports.css — Nexus-themed Create Support Ticket page
+   Covers every className in CreateSupportTicket.jsx
+   =========================================================== */
+
+/* ── container ── */
+.support-create-container {
+  min-height: 100vh;
+  background: radial-gradient(
+    ellipse at 22% 0%,
+    #0d1330 0%,
+    #070a1a 48%,
+    #02030a 100%
+  );
+  font-family: "Segoe UI", "Inter", system-ui, sans-serif;
+  color: #e8edf7;
+  box-sizing: border-box;
+  padding: 32px 40px 80px;
+
+}
+
+/* ── back button ── */
+.support-back-btn {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 8px;
+  height: 38px;
+  padding: 0 16px;
+  background: transparent;
+  border: 1px solid rgba(140, 160, 220, 0.2);
+  border-radius: 10px;
+  color: #8a95b6;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  margin-bottom: 28px;
+  transition:
+    background 0.16s,
+    color 0.16s;
+}
+.support-back-btn:hover {
+  background: rgba(255, 255, 255, 0.05);
+  color: #e8edf7;
+}
+
+.support-back-icon {
+  display: inline-flex;
+  align-items: center;
+  transform: rotate(180deg);
+  color: #8a95b6;
+}
+
+/* ── card ── */
+.card.support-create-card,
+.support-create-card {
+  background: rgba(10, 13, 28, 0.72);
+  border: 1px solid rgba(140, 160, 220, 0.13);
+  border-radius: 20px;
+  padding: 40px 40px 44px;
+  backdrop-filter: blur(14px);
+  position: relative;
+  overflow: hidden;
+}
+
+.support-create-card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(
+      circle 320px at 0% 0%,
+      rgba(168, 85, 247, 0.09),
+      transparent 70%
+    ),
+    radial-gradient(
+      circle 240px at 100% 100%,
+      rgba(52, 211, 153, 0.06),
+      transparent 70%
+    );
+  pointer-events: none;
+}
+
+.support-create-card::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    rgba(168, 85, 247, 0.7),
+    rgba(56, 189, 248, 0.45),
+    rgba(52, 211, 153, 0.35),
+    transparent
+  );
+}
+
+/* ── title & subtitle ── */
+.support-create-title {
+  font-size: 24px;
+  font-weight: 800;
+  color: #ffffff;
+  margin: 0 0 8px;
+  position: relative;
+  background: linear-gradient(90deg, #ffffff 0%, #d8b4fe 60%, #6ee7b7 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.support-create-subtitle {
+  font-size: 13.5px;
+  color: #8a95b6;
+  margin: 0 0 32px;
+  line-height: 1.6;
+  position: relative;
+}
+
+/* ── form ── */
+.support-form {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  position: relative;
+}
+
+/* ── form row (two columns) ── */
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+/* ── form group ── */
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+/* ── label ── */
+.form-label {
+  font-size: 11.5px;
+  font-weight: 600;
+  color: #aab4d1;
+  letter-spacing: 0.2px;
+}
+
+/* ── input / select / textarea ── */
+.form-input {
+  background: rgba(6, 9, 20, 0.72);
+  border: 1px solid rgba(120, 135, 180, 0.22);
+  border-radius: 10px;
+  color: #eef1fa;
+  font-size: 13.5px;
+  font-family: inherit;
+  outline: none;
+  box-sizing: border-box;
+  width: 100%;
+  height: 46px;
+  padding: 0 14px;
+  transition:
+    border-color 0.18s ease,
+    box-shadow 0.18s ease;
+}
+
+.form-input::placeholder {
+  color: #5d6786;
+}
+
+.form-input:focus {
+  border-color: rgba(168, 85, 247, 0.55);
+  box-shadow: 0 0 0 3px rgba(168, 85, 247, 0.11);
+}
+
+/* select */
+.form-select {
+  appearance: none;
+  -webkit-appearance: none;
+  cursor: pointer;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%238a95b6' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  padding-right: 36px;
+}
+
+.form-select option {
+  background: #0d1128;
+  color: #eef1fa;
+}
+
+/* textarea */
+.form-textarea {
+  height: auto;
+  padding: 12px 14px;
+  resize: vertical;
+  line-height: 1.65;
+}
+
+/* ── form actions ── */
+.form-actions {
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: center !important;
+  justify-content: flex-end;
+  gap: 12px;
+  padding-top: 8px;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  margin-top: 4px;
+}
+
+/* ── cancel button ── */
+.btn-secondary-outline {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  height: 44px;
+  padding: 0 22px;
+  background: transparent;
+  border: 1px solid rgba(140, 160, 220, 0.22);
+  border-radius: 11px;
+  color: #aab4d1;
+  font-size: 13.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    background 0.16s,
+    color 0.16s,
+    border-color 0.16s;
+}
+.btn-secondary-outline:hover {
+  background: rgba(255, 255, 255, 0.06);
+  color: #e8edf7;
+  border-color: rgba(160, 180, 230, 0.35);
+}
+
+/* ── submit button ── */
+.btn-primary.submit-btn,
+.submit-btn {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 7px;
+  height: 44px;
+  padding: 0 28px;
+  background: linear-gradient(90deg, #8b5cf6, #4f8ef7, #34d399);
+  color: #05140d;
+  border: none;
+  border-radius: 11px;
+  font-size: 13.5px;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 8px 24px -6px rgba(120, 100, 240, 0.5);
+  transition:
+    filter 0.18s ease,
+    transform 0.14s ease;
+}
+.btn-primary.submit-btn:hover:not(:disabled),
+.submit-btn:hover:not(:disabled) {
+  filter: brightness(1.08);
+}
+.btn-primary.submit-btn:active:not(:disabled),
+.submit-btn:active:not(:disabled) {
+  transform: scale(0.97);
+}
+.btn-primary.submit-btn:disabled,
+.submit-btn:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+/* ── responsive ── */
+@media (max-width: 680px) {
+  .support-create-container {
+    padding: 22px 16px 60px;
+  }
+
+  .card.support-create-card,
+  .support-create-card {
+    padding: 28px 20px 32px;
+  }
+
+  .form-row {
+    grid-template-columns: 1fr;
+  }
+
+  .form-actions {
+    flex-direction: column !important;
+    align-items: stretch !important;
+  }
+
+  .btn-secondary-outline,
+  .btn-primary.submit-btn,
+  .submit-btn {
+    width: 100%;
+  }
+}

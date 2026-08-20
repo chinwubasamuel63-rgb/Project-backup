@@ -1,12 +1,20 @@
+import mongoose from "mongoose";
 import Stream from "../models/Stream.js";
 import User from "../models/User.js";
+import StreamParticipant from "../models/StreamParticipant.js";
+import StreamBan from "../models/StreamBan.js";
+import StreamRequest from "../models/StreamRequest.js";
 import createAuditLog from "../utils/createAuditLog.js";
 import { createNotification } from "../utils/createNotification.js";
+import { finalizeStreamLifecycle } from "../services/streamLifecycle.service.js";
+import { canAccessStream } from "../services/streamAccess.service.js";
+
+const isValidObjectId = (id) => mongoose.Types.ObjectId.isValid(id);
 
 export const getAllStreams = async (req, res) => {
   try {
     const streams = await Stream.find()
-      .populate("host", "username email role")
+      .populate("host", "username role profilePicture")
       .populate("project", "name")
       .sort({
         createdAt: -1,
@@ -27,14 +35,33 @@ export const getAllStreams = async (req, res) => {
 
 export const getStreamDetails = async (req, res) => {
   try {
-    const stream = await Stream.findById(req.params.streamId)
-      .populate("host", "username email role")
+    const { streamId } = req.params;
+
+    if (!isValidObjectId(streamId)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid stream id",
+      });
+    }
+
+    const stream = await Stream.findById(streamId)
+      .populate("host", "username role profilePicture")
       .populate("project");
 
     if (!stream) {
       return res.status(404).json({
         success: false,
         message: "Stream not found",
+      });
+    }
+
+    if (
+      req.user.role !== "admin" &&
+      !canAccessStream(stream, req.user, "read")
+    ) {
+      return res.status(403).json({
+        success: false,
+        message: "You are not authorized to view this stream",
       });
     }
 
@@ -52,7 +79,16 @@ export const getStreamDetails = async (req, res) => {
 
 export const forceEndStream = async (req, res) => {
   try {
-    const stream = await Stream.findById(req.params.streamId);
+    const { streamId } = req.params;
+
+    if (!isValidObjectId(streamId)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid stream id",
+      });
+    }
+
+    const stream = await Stream.findById(streamId);
 
     if (!stream) {
       return res.status(404).json({
@@ -68,32 +104,10 @@ export const forceEndStream = async (req, res) => {
       });
     }
 
-    const endedAt = new Date();
-
-    const duration = stream.startedAt
-      ? Math.floor((endedAt - stream.startedAt) / 1000)
-      : 0;
-
-    await StreamAnalytics.create({
-      title: stream.title,
-      host: stream.host,
-      project: stream.project,
-      startedAt: stream.startedAt,
-      endedAt,
-      duration,
-      peakViewers: stream.peakViewers,
-      totalViewers: stream.totalViewers,
+    await finalizeStreamLifecycle(stream, {
+      reason: "admin-force-ended",
+      endedAt: new Date(),
     });
-
-    await StreamParticipant.deleteMany({ stream: stream._id });
-    await StreamBan.deleteMany({ stream: stream._id });
-    await StreamRequest.deleteMany({ stream: stream._id });
-
-    if (stream.thumbnail?.publicId) {
-      await cloudinary.uploader.destroy(stream.thumbnail.publicId);
-    }
-
-    await stream.deleteOne();
 
     await createNotification({
       user: stream.host,
@@ -126,7 +140,16 @@ export const forceEndStream = async (req, res) => {
 
 export const suspendStreamHost = async (req, res) => {
   try {
-    const stream = await Stream.findById(req.params.streamId);
+    const { streamId } = req.params;
+
+    if (!isValidObjectId(streamId)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid stream id",
+      });
+    }
+
+    const stream = await Stream.findById(streamId);
 
     if (!stream) {
       return res.status(404).json({
@@ -150,12 +173,11 @@ export const suspendStreamHost = async (req, res) => {
 
     await host.save();
 
-    if (stream.status === "live") {
-      stream.status = "ended";
-
-      stream.endedAt = new Date();
-
-      await stream.save();
+    if (stream.status === "started") {
+      await finalizeStreamLifecycle(stream, {
+        reason: "host-suspended",
+        endedAt: new Date(),
+      });
     }
 
     await createNotification({

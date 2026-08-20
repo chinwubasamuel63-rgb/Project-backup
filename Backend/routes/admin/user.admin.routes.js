@@ -1,6 +1,7 @@
 import express from "express";
 import {
   getAllUsers,
+  getUserDetailsAdmin,
   updateUserRole,
   adminUserAction,
 } from "../../controllers/admin/user.admin.controller.js";
@@ -11,6 +12,7 @@ import { adminOnly } from "../../middleware/admin/adminMiddleware.js";
 const router = express.Router();
 
 router.get("/users", protect, adminOnly, getAllUsers);
+router.get("/:userId", protect, adminOnly, getUserDetailsAdmin);
 router.patch("/users/:userId/role", protect, adminOnly, updateUserRole);
 router.patch("/:userId/action", protect, adminOnly, adminUserAction);
 

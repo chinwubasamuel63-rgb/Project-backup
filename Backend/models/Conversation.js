@@ -26,6 +26,13 @@ const conversationSchema = new mongoose.Schema(
       default: "direct",
     },
 
+    deletedFor: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "User",
+      },
+    ],
+
     lastMessage: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Message",

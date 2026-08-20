@@ -1,0 +1,42 @@
+.notifications-card {
+  padding: 24px;
+}
+.notifications-header {
+  margin-bottom: 16px;
+}
+.notifications-mark-all {
+  min-height: 38px;
+  border: 1px solid rgba(192, 132, 252, 0.38);
+  border-radius: 8px;
+  padding: 0 12px;
+  background: rgba(168, 85, 247, 0.14);
+  color: #f1e8ff;
+  cursor: pointer;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+}
+.notifications-mark-all:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+.notif-row {
+  width: 100%;
+  text-align: left;
+}
+.notif-row.is-read {
+  opacity: 0.7;
+}
+@media (max-width: 560px) {
+  .notifications-card {
+    padding: 16px;
+  }
+  .notifications-header {
+    align-items: flex-start;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+  .notifications-mark-all {
+    width: 100%;
+  }
+}

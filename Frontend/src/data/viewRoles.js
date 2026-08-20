@@ -6,9 +6,12 @@ export const VIEW_ROLES = {
   "/instructor": "instructor",
   "/support-instructor": "instructor",
 
-  "/admin-dashboard": "admin",
-  "/admin-users": "admin",
-  "/admin-tracks": "admin",
+  "/admin": "admin",
+  "/admin/users": "admin",
+  "/admin/projects": "admin",
+  "/admin/support": "admin",
+  "/admin/audit-logs": "admin",
+  "/admin/analytics": "admin",
 
   // Shared routes (Explicitly allowing multiple roles)
   "/profile": ["student", "instructor"],

@@ -318,4 +318,197 @@ export const CSS_STYLES = `
   .bottom-row { grid-template-columns: 1fr; }
   .stats-grid { grid-template-columns: repeat(2, 1fr); }
 }
+
+@media (max-width: 820px) {
+  .nexus-root {
+    padding: 18px 16px 28px;
+  }
+
+  .nexus-header {
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .brand-line2 {
+    font-size: 18px;
+    letter-spacing: 4px;
+  }
+
+  .tagline {
+    margin-top: 18px;
+  }
+
+  .tagline-text {
+    font-size: 20px;
+  }
+
+  .nexus-main {
+    min-height: auto;
+    margin-top: 12px;
+    gap: 18px;
+  }
+
+  .hub-column {
+    display: flex;
+    width: 100%;
+    justify-content: center;
+    align-items: center;
+  }
+
+  .hub3d {
+    width: 360px;
+    height: 360px;
+    transform: scale(0.82);
+  }
+
+  .nexus-main {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+
+  .login-column {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .tablet-wrap {
+    width: 100%;
+    display: flex;
+    justify-content: center;
+  }
+
+  .tablet-bezel {
+    width: min(100%, 430px);
+  }
+}
+
+@media (max-width: 560px) {
+  .nexus-root {
+    padding: 14px 12px 24px;
+  }
+
+  .brand {
+    gap: 10px;
+  }
+
+  .brand-mark {
+    width: 32px;
+    height: 32px;
+  }
+
+  .brand-line1 {
+    font-size: 10px;
+    letter-spacing: 2.2px;
+  }
+
+  .brand-line2 {
+    font-size: 15px;
+    letter-spacing: 3px;
+  }
+
+  .version-pill {
+    padding: 6px 10px;
+    font-size: 11px;
+  }
+
+  .tagline-bar {
+    width: 3px;
+  }
+
+  .tagline-text {
+    font-size: 17px;
+    line-height: 1.4;
+  }
+
+  .hub-column {
+    display: flex;
+    width: 100%;
+  }
+
+  .hub3d {
+    width: 280px;
+    height: 280px;
+    transform: scale(0.7);
+  }
+
+  .login-tabs {
+    gap: 5px;
+    padding: 10px 10px 0;
+  }
+
+  .login-tab {
+    font-size: 13px;
+    padding: 11px 0;
+  }
+
+  .login-body {
+    padding: 18px 16px 20px;
+  }
+
+  .login-title {
+    font-size: 20px;
+  }
+
+  .login-subtitle {
+    font-size: 12px;
+    margin-bottom: 16px;
+  }
+
+  .field-label {
+    margin-top: 10px;
+  }
+
+  .input-wrap {
+    height: 42px;
+  }
+
+  .row-between {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+    margin: 12px 0 16px;
+  }
+
+  .cta-btn {
+    height: 44px;
+  }
+
+  .divider {
+    margin-top: 18px;
+  }
+
+  .oauth-btn {
+    height: 42px;
+    font-size: 12.8px;
+  }
+
+  .secure-line {
+    line-height: 1.5;
+    margin-top: 14px;
+  }
+}
+
+@media (max-width: 420px) {
+  .tablet-bezel {
+    width: 100%;
+    border-radius: 24px;
+  }
+
+  .tablet-screen {
+    border-radius: 22px;
+  }
+
+  .login-tabs {
+    padding-top: 8px;
+  }
+
+  .login-body {
+    padding: 16px 14px 18px;
+  }
+
+  .input-wrap {
+    gap: 7px;
+    padding: 0 10px;
+  }
+}
 `;

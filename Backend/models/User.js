@@ -75,6 +75,17 @@ const userSchema = new mongoose.Schema(
         url: "",
       },
     },
+    coverImage: {
+      publicId: {
+        type: String,
+        default: "",
+      },
+
+      url: {
+        type: String,
+        default: "",
+      },
+    },
 
     bio: {
       type: String,
@@ -98,6 +109,70 @@ const userSchema = new mongoose.Schema(
     isVerified: {
       type: Boolean,
       default: false,
+    },
+
+    displayName: {
+      type: String,
+      default: "",
+      trim: true,
+    },
+
+    skills: [
+      {
+        type: String,
+        trim: true,
+      },
+    ],
+
+    experienceLevel: {
+      type: String,
+      enum: ["beginner", "intermediate", "advanced", "expert"],
+      default: "beginner",
+    },
+
+    portfolioUrl: {
+      type: String,
+      default: "",
+    },
+
+    githubUrl: {
+      type: String,
+      default: "",
+    },
+
+    linkedinUrl: {
+      type: String,
+      default: "",
+    },
+
+    isOnline: {
+      type: Boolean,
+      default: false,
+    },
+
+    lastSeen: {
+      type: Date,
+      default: null,
+    },
+
+    preferences: {
+      notifications: {
+        email: {
+          type: Boolean,
+          default: true,
+        },
+
+        push: {
+          type: Boolean,
+          default: true,
+        },
+      },
+
+      theme: {
+        type: String,
+        enum: ["dark", "light"],
+        default: "dark",
+      },
     },
 
     isSuspended: {

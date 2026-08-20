@@ -4,7 +4,109 @@ import { createPortal } from "react-dom";
 import { getProjects } from "../../services/projectService";
 import "./projects.css";
 
-export default function Projects({ notify, setView }) {
+function ProjectFilterDropdown({ value, setValue, options, open, setOpen }) {
+  const triggerRef = useRef(null);
+  const menuRef = useRef(null);
+  const [coords, setCoords] = useState({ top: 0, left: 0, width: 0 });
+
+  useLayoutEffect(() => {
+    if (open && triggerRef.current) {
+      const rect = triggerRef.current.getBoundingClientRect();
+      setCoords({ top: rect.bottom + 6, left: rect.left, width: rect.width });
+    }
+  }, [open]);
+
+  useLayoutEffect(() => {
+    if (!open || !menuRef.current || !triggerRef.current) return;
+
+    const rect = triggerRef.current.getBoundingClientRect();
+    const menuHeight = menuRef.current.offsetHeight;
+    const bottomSpace = window.innerHeight - rect.bottom;
+
+    if (bottomSpace < menuHeight + 12 && rect.top > menuHeight + 12) {
+      setCoords((previous) => ({
+        ...previous,
+        top: rect.top - menuHeight - 6,
+      }));
+    }
+  }, [open, coords.left, coords.width]);
+
+  useEffect(() => {
+    if (!open) return undefined;
+
+    const handleOutside = (event) => {
+      if (
+        triggerRef.current &&
+        !triggerRef.current.contains(event.target) &&
+        menuRef.current &&
+        !menuRef.current.contains(event.target)
+      ) {
+        setOpen(false);
+      }
+    };
+
+    const handleScrollOrResize = () => {
+      if (triggerRef.current) {
+        const rect = triggerRef.current.getBoundingClientRect();
+        setCoords({ top: rect.bottom + 6, left: rect.left, width: rect.width });
+      }
+    };
+
+    document.addEventListener("mousedown", handleOutside);
+    window.addEventListener("scroll", handleScrollOrResize, true);
+    window.addEventListener("resize", handleScrollOrResize);
+    return () => {
+      document.removeEventListener("mousedown", handleOutside);
+      window.removeEventListener("scroll", handleScrollOrResize, true);
+      window.removeEventListener("resize", handleScrollOrResize);
+    };
+  }, [open, setOpen]);
+
+  return (
+    <div className={`proj-select-shell ${open ? "is-open" : ""}`}>
+      <button
+        type="button"
+        ref={triggerRef}
+        className="proj-select-trigger"
+        onClick={() => setOpen(!open)}
+      >
+        {value}
+        <Icon name="chevronDown" size={14} />
+      </button>
+      {open
+        ? createPortal(
+            <div
+              ref={menuRef}
+              className="proj-select-menu proj-select-menu-portal"
+              style={{
+                position: "fixed",
+                top: coords.top,
+                left: coords.left,
+                width: Math.max(coords.width, 160),
+              }}
+            >
+              {options.map((option) => (
+                <button
+                  type="button"
+                  key={option}
+                  className="proj-select-option"
+                  onClick={() => {
+                    setValue(option);
+                    setOpen(false);
+                  }}
+                >
+                  {option}
+                </button>
+              ))}
+            </div>,
+            document.body,
+          )
+        : null}
+    </div>
+  );
+}
+
+export default function Projects({ notify }) {
   const navigate = useNavigate();
   const [search, setSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("All Categories");
@@ -13,6 +115,8 @@ export default function Projects({ notify, setView }) {
   const [openDropdown, setOpenDropdown] = useState(null); // null | "category" | "status" | "access"
   const [projects, setProjects] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [currentPage, setCurrentPage] = useState(1);
+  const projectsPerPage = 8;
 
   const stats = useMemo(() => {
     const openProjects = projects.filter(
@@ -66,12 +170,26 @@ export default function Projects({ notify, setView }) {
       const statusMatch =
         statusFilter === "All Status" || project.status === statusFilter;
 
+      const categoryMatch =
+        categoryFilter === "All Categories" ||
+        project.category === categoryFilter;
+
       const accessMatch =
         accessFilter === "All Access" || project.visibility === accessFilter;
 
-      return searchMatch && statusMatch && accessMatch;
+      return searchMatch && categoryMatch && statusMatch && accessMatch;
     });
-  }, [projects, search, statusFilter, accessFilter]);
+  }, [projects, search, categoryFilter, statusFilter, accessFilter]);
+
+  const totalPages = Math.max(
+    1,
+    Math.ceil(filteredProjects.length / projectsPerPage),
+  );
+  const visiblePage = Math.min(currentPage, totalPages);
+  const visibleProjects = filteredProjects.slice(
+    (visiblePage - 1) * projectsPerPage,
+    visiblePage * projectsPerPage,
+  );
 
   const statusClass = {
     Idea: "status-open",
@@ -87,119 +205,12 @@ export default function Projects({ notify, setView }) {
     Private: "access-private",
   };
 
-  const CustomDropdown = ({ value, setValue, options, open, setOpen }) => {
-    const triggerRef = useRef(null);
-    const menuRef = useRef(null);
-    const [coords, setCoords] = useState({ top: 0, left: 0, width: 0 });
-
-    useLayoutEffect(() => {
-      if (open && triggerRef.current) {
-        const rect = triggerRef.current.getBoundingClientRect();
-        setCoords({
-          top: rect.bottom + 6,
-          left: rect.left,
-          width: rect.width,
-        });
-      }
-    }, [open]);
-
-    useLayoutEffect(() => {
-      if (!open || !menuRef.current || !triggerRef.current) return;
-
-      const rect = triggerRef.current.getBoundingClientRect();
-      const menuHeight = menuRef.current.offsetHeight;
-      const viewportHeight = window.innerHeight;
-      const bottomSpace = viewportHeight - rect.bottom;
-
-      if (bottomSpace < menuHeight + 12 && rect.top > menuHeight + 12) {
-        setCoords((prev) => ({
-          ...prev,
-          top: rect.top - menuHeight - 6,
-        }));
-      }
-    }, [open, coords.left, coords.width]);
-
-    useEffect(() => {
-      if (!open) return;
-
-      function handleOutside(e) {
-        if (
-          triggerRef.current &&
-          !triggerRef.current.contains(e.target) &&
-          menuRef.current &&
-          !menuRef.current.contains(e.target)
-        ) {
-          setOpen(false);
-        }
-      }
-
-      function handleScrollOrResize() {
-        if (triggerRef.current) {
-          const rect = triggerRef.current.getBoundingClientRect();
-          setCoords({
-            top: rect.bottom + 6,
-            left: rect.left,
-            width: rect.width,
-          });
-        }
-      }
-
-      document.addEventListener("mousedown", handleOutside);
-      window.addEventListener("scroll", handleScrollOrResize, true);
-      window.addEventListener("resize", handleScrollOrResize);
-      return () => {
-        document.removeEventListener("mousedown", handleOutside);
-        window.removeEventListener("scroll", handleScrollOrResize, true);
-        window.removeEventListener("resize", handleScrollOrResize);
-      };
-    }, [open, setOpen]);
-
-    return (
-      <div className={`proj-select-shell ${open ? "is-open" : ""}`}>
-        <button
-          ref={triggerRef}
-          className="proj-select-trigger"
-          onClick={() => setOpen(!open)}
-        >
-          {value}
-          <Icon name="chevronDown" size={14} />
-        </button>
-        {open &&
-          createPortal(
-            <div
-              ref={menuRef}
-              className="proj-select-menu proj-select-menu-portal"
-              style={{
-                position: "fixed",
-                top: coords.top,
-                left: coords.left,
-                width: Math.max(coords.width, 160),
-              }}
-            >
-              {options.map((o) => (
-                <button
-                  key={o}
-                  className="proj-select-option"
-                  onClick={() => {
-                    setValue(o);
-                    setOpen(false);
-                  }}
-                >
-                  {o}
-                </button>
-              ))}
-            </div>,
-            document.body,
-          )}
-      </div>
-    );
-  };
-
   const clearFilters = () => {
     setSearch("");
     setCategoryFilter("All Categories");
     setStatusFilter("All Status");
     setAccessFilter("All Access");
+    setCurrentPage(1);
     notify && notify("Filters cleared.");
   };
 
@@ -222,8 +233,12 @@ export default function Projects({ notify, setView }) {
       }
     };
 
-    fetchProjects();
-  }, []);
+    const timerId = window.setTimeout(() => {
+      void fetchProjects();
+    }, 0);
+
+    return () => window.clearTimeout(timerId);
+  }, [notify]);
 
   if (loading) {
     return (
@@ -254,21 +269,40 @@ export default function Projects({ notify, setView }) {
           <Icon name="search" size={15} style={{ color: "#6b7494" }} />
           <input
             type="text"
-            placeholder="Search projects by title, description, or tech..."
+            placeholder="Search projects"
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            onChange={(e) => {
+              setSearch(e.target.value);
+              setCurrentPage(1);
+            }}
           />
         </div>
-        <CustomDropdown
+        <ProjectFilterDropdown
           value={categoryFilter}
-          setValue={setCategoryFilter}
-          options={["All Categories", "Web", "Mobile", "AI/ML", "Game Dev"]}
+          setValue={(value) => {
+            setCategoryFilter(value);
+            setCurrentPage(1);
+          }}
+          options={[
+            "All Categories",
+            "Web",
+            "Mobile",
+            "AI/ML",
+            "Game Dev",
+            "Desktop",
+            "DevOps",
+            "Cybersecurity",
+            "Blockchain",
+          ]}
           open={openDropdown === "category"}
           setOpen={(next) => setOpenDropdown(next ? "category" : null)}
         />
-        <CustomDropdown
+        <ProjectFilterDropdown
           value={statusFilter}
-          setValue={setStatusFilter}
+          setValue={(value) => {
+            setStatusFilter(value);
+            setCurrentPage(1);
+          }}
           options={[
             "All Status",
             "Idea",
@@ -281,9 +315,12 @@ export default function Projects({ notify, setView }) {
           open={openDropdown === "status"}
           setOpen={(next) => setOpenDropdown(next ? "status" : null)}
         />
-        <CustomDropdown
+        <ProjectFilterDropdown
           value={accessFilter}
-          setValue={setAccessFilter}
+          setValue={(value) => {
+            setAccessFilter(value);
+            setCurrentPage(1);
+          }}
           options={["All Access", "Public", "Private"]}
           open={openDropdown === "access"}
           setOpen={(next) => setOpenDropdown(next ? "access" : null)}
@@ -308,13 +345,13 @@ export default function Projects({ notify, setView }) {
       </div>
 
       <div className="glass-card proj-list">
-        {filteredProjects.length === 0 ? (
+        {visibleProjects.length === 0 ? (
           <div className="empty-state">
             <h3>No Projects Found</h3>
             <p>Create a project or adjust your filters.</p>
           </div>
         ) : (
-          filteredProjects.map((p) => (
+          visibleProjects.map((p) => (
             <div className="proj-row" key={p._id}>
               <div className="proj-row-icon">
                 {p.logo?.url ? (
@@ -411,15 +448,42 @@ export default function Projects({ notify, setView }) {
 
       <div className="proj-pagination-row">
         <span className="proj-showing-label">
-          Showing 1 to 8 of 12 projects
+          Showing{" "}
+          {filteredProjects.length === 0
+            ? 0
+            : (currentPage - 1) * projectsPerPage + 1}{" "}
+          to {Math.min(currentPage * projectsPerPage, filteredProjects.length)}{" "}
+          of {filteredProjects.length} projects
         </span>
         <div className="proj-pagination">
-          <button className="page-arrow" disabled>
+          <button
+            className="page-arrow"
+            disabled={currentPage === 1}
+            onClick={() => setCurrentPage((page) => Math.max(1, page - 1))}
+            aria-label="Previous projects page"
+          >
             <Icon name="chevronLeft" size={14} />
           </button>
-          <button className="page-num page-num-active">1</button>
-          <button className="page-num">2</button>
-          <button className="page-arrow">
+          {Array.from({ length: totalPages }, (_, index) => index + 1).map(
+            (page) => (
+              <button
+                key={page}
+                className={`page-num${currentPage === page ? " page-num-active" : ""}`}
+                onClick={() => setCurrentPage(page)}
+                aria-label={`Projects page ${page}`}
+              >
+                {page}
+              </button>
+            ),
+          )}
+          <button
+            className="page-arrow"
+            disabled={currentPage === totalPages}
+            onClick={() =>
+              setCurrentPage((page) => Math.min(totalPages, page + 1))
+            }
+            aria-label="Next projects page"
+          >
             <Icon name="chevronRight" size={14} />
           </button>
         </div>

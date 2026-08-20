@@ -123,7 +123,7 @@ export const createPartnershipRequest = async (req, res) => {
         });
       }
     } catch (error) {
-      console.error("Partnership request email failed:", error.message);
+      ;
     }
 
     res.status(201).json({
@@ -209,6 +209,7 @@ export const acceptRequest = async (req, res) => {
       });
     }
 
+    // Only project owner can accept partnership requests
     if (project.owner.toString() !== req.user._id.toString()) {
       return res.status(403).json({
         success: false,
@@ -223,30 +224,56 @@ export const acceptRequest = async (req, res) => {
       });
     }
 
+    // Update request status
     request.status = "Accepted";
     request.statusChangedAt = Date.now();
 
     await request.save();
 
-    await createNotification({
-      user: request.applicant,
-      type: "partnership_accepted",
-      title: "Request Accepted",
-      message: "Your partnership request has been accepted.",
-      relatedEntity: project._id,
-      relatedEntityType: "Project",
-    });
+    // Add applicant to project members
+    const alreadyMember = project.members.some(
+      (member) => member.toString() === request.applicant.toString(),
+    );
 
-    await createProjectActivity({
-      project: project._id,
-      user: applicant._id,
-      action: "MEMBER_JOINED",
-      message: `${applicant.username} joined the project`,
-    });
+    if (!alreadyMember) {
+      project.members.push(request.applicant);
+      await project.save();
+    }
 
+    const applicant = await User.findById(request.applicant).select(
+      "username email",
+    );
+
+    // Create project activity
     try {
-      const applicant = await User.findById(request.applicant).select("email");
+      if (applicant) {
+        await createProjectActivity({
+          project: project._id,
+          user: applicant._id,
+          action: "MEMBER_JOINED",
+          message: `${applicant.username} joined the project`,
+        });
+      }
+    } catch (error) {
+      ;
+    }
 
+    // Create notification
+    try {
+      await createNotification({
+        user: request.applicant,
+        type: "partnership_accepted",
+        title: "Request Accepted",
+        message: "Your partnership request has been accepted.",
+        relatedEntity: project._id,
+        relatedEntityType: "Project",
+      });
+    } catch (error) {
+      ;
+    }
+
+    // Send email
+    try {
       if (applicant?.email) {
         await sendEmail({
           to: applicant.email,
@@ -255,16 +282,7 @@ export const acceptRequest = async (req, res) => {
         });
       }
     } catch (error) {
-      console.error("Partnership accepted email failed:", error.message);
-    }
-
-    const alreadyMember = project.members.some(
-      (member) => member.toString() === request.applicant.toString(),
-    );
-
-    if (!alreadyMember) {
-      project.members.push(request.applicant);
-      await project.save();
+      ;
     }
 
     res.status(200).json({
@@ -345,7 +363,7 @@ export const rejectRequest = async (req, res) => {
         });
       }
     } catch (error) {
-      console.error("Partnership rejected email failed:", error.message);
+      ;
     }
 
     res.status(200).json({

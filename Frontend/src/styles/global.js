@@ -19,6 +19,10 @@ const COLORS = {
 
 export const globalStyles = `
   * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body, #root {
+    max-width: 100%;
+    overflow-x: hidden;
+  }
   body { background: ${COLORS.bg}; color: ${COLORS.text}; font-family: 'Inter', system-ui, sans-serif; }
   ::-webkit-scrollbar { width: 4px; height: 4px; }
   ::-webkit-scrollbar-track { background: ${COLORS.surface}; }

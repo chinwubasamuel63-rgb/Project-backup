@@ -62,11 +62,7 @@ export const uploadProjectImages = async (projectId, files) => {
     formData.append("images", file);
   });
 
-  const { data } = await api.patch(`/projects/${projectId}/images`, formData, {
-    headers: {
-      "Content-Type": "multipart/form-data",
-    },
-  });
+  const { data } = await api.patch(`/projects/${projectId}/images`, formData);
 
   return data;
 };

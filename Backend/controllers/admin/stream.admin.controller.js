@@ -19,7 +19,7 @@ export const getLiveStreamsAdmin = async (req, res) => {
   } catch (error) {
     res.status(500).json({
       success: false,
-      message: error.message,
+      message: "Unable to load admin stream data",
     });
   }
 };
@@ -58,7 +58,7 @@ export const getStreamAnalyticsAdmin = async (req, res) => {
   } catch (error) {
     res.status(500).json({
       success: false,
-      message: error.message,
+      message: "Unable to load admin stream data",
     });
   }
 };
@@ -90,7 +90,7 @@ export const getStreamAnalyticsByIdAdmin = async (req, res) => {
   } catch (error) {
     res.status(500).json({
       success: false,
-      message: error.message,
+      message: "Unable to load admin stream data",
     });
   }
 };

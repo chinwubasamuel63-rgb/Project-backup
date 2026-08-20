@@ -7,5 +7,10 @@ export const getUnreadNotificationCount = async () => {
 
 export const getMyConversations = async () => {
   const { data } = await api.get("/messages/conversations/my");
-  return data;
+  const payload = data?.data || data || {};
+
+  return {
+    ...data,
+    conversations: payload.conversations || data?.conversations || [],
+  };
 };

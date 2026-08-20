@@ -9,7 +9,14 @@ export const appShellStyles = `
   @keyframes float3d { 0%, 100% { transform: translate3d(0,0,0) rotateX(58deg) rotateZ(-18deg); } 50% { transform: translate3d(0,-14px,20px) rotateX(58deg) rotateZ(8deg); } }
   @keyframes orbitPulse { 0%, 100% { transform: scale(1) rotate(0deg); opacity: .65; } 50% { transform: scale(1.08) rotate(12deg); opacity: 1; } }
   @keyframes shimmer { 0% { transform: translateX(-120%); } 100% { transform: translateX(120%); } }
-  .app-frame { min-height: 100vh; background: radial-gradient(circle at 18% 8%, rgba(34,197,94,.14), transparent 28%), radial-gradient(circle at 84% 14%, rgba(168,85,247,.18), transparent 28%), #07101d; color: ${COLORS.text}; }
+  .app-frame {
+    width: 100%;
+    max-width: 100vw;
+    min-height: 100vh;
+    overflow-x: hidden;
+    background: radial-gradient(circle at 18% 8%, rgba(34,197,94,.14), transparent 28%), radial-gradient(circle at 84% 14%, rgba(168,85,247,.18), transparent 28%), #07101d;
+    color: ${COLORS.text};
+  }
   .app-body { display: flex; min-height: calc(100vh - 68px); }
   .main-surface { flex: 1; overflow-y: auto; background: linear-gradient(180deg, rgba(15,23,42,.62), rgba(7,16,29,.94)); }
   .top-nav { height: 68px; display: flex; align-items: center; gap: 18px; padding: 0 24px; border-bottom: 1px solid rgba(148,163,184,.18); background: rgba(7,16,29,.82); backdrop-filter: blur(18px); position: sticky; top: 0; z-index: 20; }
@@ -37,5 +44,25 @@ export const appShellStyles = `
   .side-icon { width: 28px; height: 28px; display: grid; place-items: center; border-radius: 7px; background: rgba(148,163,184,.1); font-size: 10px; font-weight: 900; color: #fff; }
   .lock-chip { margin-left: auto; }
   .sidebar-footer { padding-top: 12px; border-top: 1px solid rgba(148,163,184,.14); }
-  @media (max-width: 980px) { .top-search { display: none; } .app-body { flex-direction: column; } .shell-sidebar { width: 100%; min-height: auto; } .side-nav { display: grid; grid-template-columns: repeat(2, 1fr); } }
+  
+  /* Tablet: 1024px - 980px — Keep sidebar visible */
+  @media (max-width: 1024px) {
+    .top-search { display: none; }
+    .shell-sidebar { width: 200px; padding: 14px 10px; }
+  }
+  
+  /* Tablet: 980px and below — Sidebar visible but narrower */
+  @media (max-width: 980px) {
+    .shell-sidebar { width: 180px; padding: 12px 8px; }
+    .side-nav { gap: 4px; }
+    .side-link { font-size: 12px; min-height: 38px; padding: 0 8px; gap: 8px; }
+    .side-icon { width: 24px; height: 24px; font-size: 9px; }
+  }
+  
+  /* Mobile: 768px and below — Hide sidebar, show bottom nav */
+  @media (max-width: 768px) {
+    .shell-sidebar { display: none; }
+    .app-body { min-height: calc(100vh - 138px); }
+    .main-surface { padding-bottom: 0; }
+  }
 `;

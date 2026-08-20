@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
+import { useAuth } from "../../hooks/useAuth";
 import { useNavigate } from "react-router-dom";
-import { COLORS } from "../../data/colors";
 import { getProducts } from "../../services/productService";
 import { getJobs } from "../../services/jobService";
 import { joinStream } from "../../services/streamService";
@@ -192,6 +192,15 @@ function Icon({ name, size = 18, style }) {
   );
 }
 
+const getStreamThumbnailUrl = (stream) => {
+  const thumb = stream?.thumbnail;
+
+  if (!thumb) return "";
+  if (typeof thumb === "string") return thumb;
+
+  return thumb.url || thumb.secure_url || thumb.src || "";
+};
+
 function Sparkline({ data, color }) {
   const w = 70,
     h = 24;
@@ -222,19 +231,83 @@ function Sparkline({ data, color }) {
   );
 }
 
-function Avatar({ name, size = 26 }) {
-  const initials = name
+function Avatar({ name = "User", avatar, size = 26 }) {
+  const avatarUrl = typeof avatar === "string" ? avatar : avatar?.url;
+
+  const initials = String(name || "User")
     .split(" ")
+    .filter(Boolean)
     .map((n) => n[0])
     .slice(0, 2)
-    .join("");
+    .join("")
+    .toUpperCase();
+
+  if (avatarUrl) {
+    return (
+      <img
+        src={avatarUrl}
+        alt={name}
+        className="mini-avatar"
+        style={{
+          width: size,
+          height: size,
+        }}
+      />
+    );
+  }
+
   return (
     <div
       className="mini-avatar"
-      style={{ width: size, height: size, fontSize: size * 0.4 }}
+      style={{
+        width: size,
+        height: size,
+        fontSize: size * 0.4,
+      }}
     >
       {initials}
     </div>
+  );
+}
+
+function getConversationDisplayName(conversation, currentUserId) {
+  const conversationType = String(
+    conversation?.conversationType || conversation?.type || "",
+  ).toLowerCase();
+
+  // For support conversations, show the ticket number from the name field
+  if (conversationType === "support" && conversation?.name?.trim()) {
+    return conversation.name;
+  }
+
+  const participants = Array.isArray(conversation?.participants)
+    ? conversation.participants
+    : [];
+
+  const otherParticipants = participants.filter(
+    (participant) =>
+      String(participant?._id || participant?.id || participant) !==
+      String(currentUserId),
+  );
+
+  const preferredName =
+    otherParticipants.find((participant) => participant?.username?.trim()) ||
+    otherParticipants.find((participant) => participant?.name?.trim()) ||
+    (conversation?.name?.trim() && conversation.name !== "Conversation"
+      ? conversation.name
+      : null);
+
+  if (typeof preferredName === "object") {
+    return preferredName.username || preferredName.name || "User";
+  }
+
+  return preferredName || "User";
+}
+
+function hasConversationMessage(conversation) {
+  return Boolean(
+    conversation?.lastMessage?.content?.trim() ||
+    conversation?.lastMessage?.attachments?.length,
   );
 }
 
@@ -412,6 +485,7 @@ function StreamArt({ variant }) {
 
 export function StudentDashboard({ setView, notify }) {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [projects, setProjects] = useState([]);
   const [partnerships, setPartnerships] = useState([]);
   const [messages, setMessages] = useState([]);
@@ -423,14 +497,31 @@ export function StudentDashboard({ setView, notify }) {
 
   const [loading, setLoading] = useState(true);
 
-  const handleJoinStream = async (streamId) => {
+  const handleJoinStream = async (stream) => {
     try {
-      await joinStream(streamId);
+      await joinStream(stream._id || stream.id);
 
-      navigate("/live");
-    } catch (error) {
-      console.error(error);
+      if (stream.role === "host" || stream.role === "speaker") {
+        navigate(`/streams/${stream._id || stream.id}/studio`);
+      } else {
+        navigate(`/streams/${stream._id || stream.id}/watch`);
+      }
+    } catch (err) {
+      if (notify) {
+        notify(`Could not join stream: ${err.message}`);
+      }
     }
+  };
+
+  const canManagePartnership = (project) => {
+    if (!user || !project) return false;
+
+    const userId = user._id;
+
+    return (
+      project.owner?._id === userId ||
+      project.coOwners?.some((owner) => owner._id === userId)
+    );
   };
 
   const handleAccept = async (id) => {
@@ -459,7 +550,7 @@ export function StudentDashboard({ setView, notify }) {
       color: "#34d399",
       icon: "folder",
       sub: "Your active projects",
-      data: [1, 2, 3, 4],
+      data: [0, Math.ceil(projects.length / 2), projects.length],
     },
     {
       label: "Requests",
@@ -467,7 +558,7 @@ export function StudentDashboard({ setView, notify }) {
       color: "#a855f7",
       icon: "partner",
       sub: "Pending partnership requests",
-      data: [1, 2, 3, 4],
+      data: [0, Math.ceil(partnerships.length / 2), partnerships.length],
     },
     {
       label: "Messages",
@@ -475,19 +566,40 @@ export function StudentDashboard({ setView, notify }) {
       color: "#60a5fa",
       icon: "chat",
       sub: "Active conversations",
-      data: [1, 2, 3, 4],
+      data: [0, Math.ceil(messages.length / 2), messages.length],
     },
     {
       label: "Notifications",
       value: notifications.filter((n) => !n.isRead).length,
-      color: "#f59e0b",
+      color: "#ef4444",
       icon: "bell",
       sub: "Unread notifications",
-      data: [1, 2, 3, 4],
+      data: [
+        0,
+        Math.ceil(
+          notifications.filter((notification) => !notification.isRead).length /
+            2,
+        ),
+        notifications.filter((notification) => !notification.isRead).length,
+      ],
     },
   ];
 
   useEffect(() => {
+    const syncNotifications = async () => {
+      try {
+        const notificationData = await getNotifications();
+        const sortedNotifications = (notificationData.notifications || [])
+          .slice()
+          .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+          .slice(0, 5);
+
+        setNotifications(sortedNotifications);
+      } catch (error) {
+        console.error("Student dashboard notification sync error:", error);
+      }
+    };
+
     const loadDashboard = async () => {
       try {
         const [
@@ -510,13 +622,20 @@ export function StudentDashboard({ setView, notify }) {
           getJobs(),
         ]);
 
+        const sortedNotifications = (notificationData.notifications || [])
+          .slice()
+          .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+          .slice(0, 5);
+
         setProjects(projectsData.projects || []);
 
         setPartnerships(partnershipData.requests || []);
 
-        setMessages(messageData.conversations || []);
+        setMessages(
+          (messageData.conversations || []).filter(hasConversationMessage),
+        );
 
-        setNotifications(notificationData.notifications || []);
+        setNotifications(sortedNotifications);
 
         setTickets(ticketData.tickets || []);
 
@@ -525,9 +644,10 @@ export function StudentDashboard({ setView, notify }) {
         setJobs(jobsData.jobs || []);
 
         setStreams(
-          (streamData.streams || []).filter(
-            (stream) => stream.status === "live",
-          ),
+          (streamData.streams || []).filter((stream) => {
+            const status = String(stream?.status || "").toLowerCase();
+            return status === "live" || status === "started";
+          }),
         );
       } catch (error) {
         console.error(error);
@@ -536,12 +656,27 @@ export function StudentDashboard({ setView, notify }) {
       }
     };
 
+    const handleNotificationsUpdated = () => {
+      syncNotifications();
+    };
+
     loadDashboard();
+    window.addEventListener(
+      "devstream:notifications-updated",
+      handleNotificationsUpdated,
+    );
+
+    return () => {
+      window.removeEventListener(
+        "devstream:notifications-updated",
+        handleNotificationsUpdated,
+      );
+    };
   }, []);
 
   if (loading) {
     return (
-      <div className="page-wrap projects-page-v2">
+      <div className="page-wrap student-home-v2">
         <div className="glass-card">Loading Dashboard</div>
       </div>
     );
@@ -581,7 +716,7 @@ export function StudentDashboard({ setView, notify }) {
       <section className="two-col-row">
         <div className="glass-card panel-block">
           <div className="panel-header">
-            <h3>Recent Projects</h3>
+            <h3>My Projects</h3>
             <button
               className="view-all-link"
               onClick={() => navigate("/projects")}
@@ -589,38 +724,73 @@ export function StudentDashboard({ setView, notify }) {
               View All
             </button>
           </div>
-          <div className="project-card-grid">
-            {projects.length === 0 ? (
-              <div className="empty-row">No projects yet.</div>
-            ) : (
-              projects.slice(0, 4).map((project) => (
-                <div className="project-card" key={project._id}>
-                  <ProjectArt variant="default" />
-                  <div className="project-card-body">
-                    <div className="project-card-title">{project.name}</div>
-                    <div className="project-card-desc">
-                      {project.tagline || "No tagline available"}
-                    </div>
-                    <div className="project-card-footer">
-                      <div className="avatar-stack">
-                        {Array.from({
-                          length: Math.min(project.members?.length || 0, 3),
-                        }).map((_, i) => (
-                          <Avatar key={i} name={project.name + i} size={22} />
-                        ))}
-                        {(project.members?.length || 0) > 3 && (
-                          <span className="avatar-more">
-                            +{project.members?.length - 3}
-                          </span>
-                        )}
-                      </div>
-                      <span className="status-pill status-active">
-                        <span className="status-dot" /> Active
+          <div className="manage-row-list">
+            {projects.slice(0, 3).map((p) => (
+              <div
+                className="manage-row project-clickable"
+                key={p.id || p._id}
+                onClick={() => navigate(`/projects/${p._id || p.id}`)}
+              >
+                <div className="project-card-image">
+                  {p.images?.[0]?.url ? (
+                    <img
+                      src={p.coverImage?.url}
+                      alt={p.name}
+                      className="project-cover-image"
+                    />
+                  ) : (
+                    <ProjectArt variant="nexus" />
+                  )}
+                </div>
+                <div className="manage-row-body">
+                  <div className="manage-row-title">{p.name}</div>
+                  <div className="manage-row-desc">
+                    {p.tagline || p.description || "No description available"}
+                  </div>
+                  <div className="avatar-stack">
+                    {p.members?.slice(0, 3).map((member) => (
+                      <Avatar
+                        key={member._id}
+                        name={member.username}
+                        size={20}
+                      />
+                    ))}
+                    {(p.members?.length || p.members || 0) > 3 && (
+                      <span className="avatar-more">
+                        +{(p.members?.length || p.members) - 3}
                       </span>
-                    </div>
+                    )}
                   </div>
                 </div>
-              ))
+                <div className="manage-row-stat">
+                  <div className="manage-row-stat-value">
+                    {p.members?.length || p.members || 0}
+                  </div>
+                  <div className="manage-row-stat-label">Members</div>
+                </div>
+                <div className="manage-row-stat">
+                  <div className="manage-row-stat-value">
+                    {p.partnershipCount || 0}
+                  </div>
+                  <div className="manage-row-stat-label">
+                    Partnership Application
+                  </div>
+                </div>
+                <button
+                  className="btn-manage"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    navigate(`/projects/${p._id || p.id}`);
+                  }}
+                >
+                  Manage
+                </button>
+              </div>
+            ))}
+            {projects.length === 0 && (
+              <div className="empty-row">
+                You haven't initialized any live projects yet.
+              </div>
             )}
           </div>
         </div>
@@ -639,7 +809,15 @@ export function StudentDashboard({ setView, notify }) {
               streams.slice(0, 5).map((stream) => (
                 <div className="stream-row" key={stream._id}>
                   <div className="stream-thumb-wrap">
-                    <StreamArt variant="default" />
+                    {getStreamThumbnailUrl(stream) ? (
+                      <img
+                        src={getStreamThumbnailUrl(stream)}
+                        alt={stream.title || "Stream thumbnail"}
+                        className="stream-thumbnail-image"
+                      />
+                    ) : (
+                      <StreamArt variant="default" />
+                    )}
                     <span className="live-chip">LIVE</span>
                     <span className="viewer-chip">
                       <Icon name="eye" size={11} /> {stream.totalViewers || 0}
@@ -650,6 +828,7 @@ export function StudentDashboard({ setView, notify }) {
                     <div className="stream-host">
                       <Avatar
                         name={stream.host?.username || "Host"}
+                        avatar={stream.host?.avatar?.url}
                         size={18}
                       />
                       {stream.host?.username || "Unknown Host"}
@@ -686,7 +865,11 @@ export function StudentDashboard({ setView, notify }) {
           <div className="list-rows">
             {partnerships.map((request) => (
               <div className="request-row" key={request._id}>
-                <Avatar name={request.applicant?.username} size={34} />
+                <Avatar
+                  name={request.applicant?.username}
+                  avatar={request.applicant?.avatar?.url}
+                  size={34}
+                />
                 <div className="request-row-body">
                   <div className="request-name">
                     {request.applicant?.username}
@@ -696,22 +879,23 @@ export function StudentDashboard({ setView, notify }) {
                     {request.project?.name || "No project specified"}
                   </div>
                 </div>
-                <div className="request-actions">
-                  <button
-                    className="btn-accept"
-                    onClick={() => {
-                      handleAccept(request._id);
-                    }}
-                  >
-                    Accept
-                  </button>
-                  <button
-                    className="btn-reject"
-                    onClick={() => handleReject(request._id)}
-                  >
-                    Reject
-                  </button>
-                </div>
+                {canManagePartnership(request.project) && (
+                  <div className="request-actions">
+                    <button
+                      className="btn-accept"
+                      onClick={() => handleAccept(request._id)}
+                    >
+                      Accept
+                    </button>
+
+                    <button
+                      className="btn-reject"
+                      onClick={() => handleReject(request._id)}
+                    >
+                      Reject
+                    </button>
+                  </div>
+                )}
               </div>
             ))}
             {partnerships.length === 0 && (
@@ -735,38 +919,43 @@ export function StudentDashboard({ setView, notify }) {
               <div className="empty-row">No messages yet.</div>
             )}
             {messages.length > 0 &&
-              messages.slice(0, 5).map((conversation) => (
-                <button
-                  className="message-row"
-                  key={conversation._id}
-                  onClick={() => setView && setView("messages")}
-                >
-                  <Avatar
-                    name={conversation.name || "Conversation"}
-                    size={34}
-                  />
-                  <div className="message-row-body">
-                    <div className="message-name">
-                      {conversation.name || "Conversation"}
+              messages.slice(0, 5).map((conversation) => {
+                const displayName = getConversationDisplayName(
+                  conversation,
+                  user?._id,
+                );
+
+                return (
+                  <button
+                    className="message-row"
+                    key={conversation._id}
+                    onClick={() => setView && setView("messages")}
+                  >
+                    <Avatar name={displayName} size={34} />
+                    <div className="message-row-body">
+                      <div className="message-name">{displayName}</div>
+                      <div className="message-text">
+                        {conversation.lastMessage?.content ||
+                          "Shared attachment"}
+                      </div>
                     </div>
-                    <div className="message-text">
-                      {conversation.lastMessage?.content || "No messages yet"}
-                    </div>
-                  </div>
-                  <div className="message-meta">
-                    <span className="message-time">
-                      {conversation.updatedAt
-                        ? new Date(conversation.updatedAt).toLocaleDateString()
-                        : ""}
-                    </span>
-                    {conversation.unreadCount > 0 && (
-                      <span className="message-unread">
-                        {conversation.unreadCount}
+                    <div className="message-meta">
+                      <span className="message-time">
+                        {conversation.updatedAt
+                          ? new Date(
+                              conversation.updatedAt,
+                            ).toLocaleDateString()
+                          : ""}
                       </span>
-                    )}
-                  </div>
-                </button>
-              ))}
+                      {conversation.unreadCount > 0 && (
+                        <span className="message-unread">
+                          {conversation.unreadCount}
+                        </span>
+                      )}
+                    </div>
+                  </button>
+                );
+              })}
           </div>
         </div>
       </section>
@@ -805,7 +994,7 @@ export function StudentDashboard({ setView, notify }) {
         <div className="glass-card panel-block-sm">
           <div className="panel-header">
             <h3>Hiring Opportunities</h3>
-            <button className="view-all-link" onClick={() => navigate("/jobs")}>
+            <button className="view-all-link" onClick={() => navigate("/hire")}>
               View All
             </button>
           </div>
@@ -822,7 +1011,7 @@ export function StudentDashboard({ setView, notify }) {
                   </div>
                 </div>
                 <span
-                  className={`job-type job-type- ${
+                  className={`job-type ${
                     job.isRemote ? "job-type-remote" : "job-type-onsite"
                   }`}
                 >
@@ -831,7 +1020,7 @@ export function StudentDashboard({ setView, notify }) {
               </div>
             ))}
           </div>
-          <button className="btn-browse" onClick={() => navigate("/jobs")}>
+          <button className="btn-browse" onClick={() => navigate("/hire")}>
             Browse All Jobs <Icon name="arrow" size={13} />
           </button>
         </div>
@@ -875,31 +1064,58 @@ export function StudentDashboard({ setView, notify }) {
             <h3>Notifications</h3>
             <button
               className="view-all-link"
-              onClick={() => navigate("/messages")}
+              onClick={() => navigate("/notifications")}
             >
               View All
             </button>
           </div>
           <div className="list-rows-sm">
-            {notifications.slice(0, 5).map((notification) => (
-              <div className="notif-row" key={notification._id}>
-                <div className="notif-icon">
-                  <Icon name="bell" size={14} />
-                </div>
-                <div className="notif-row-body">
-                  <div className="notif-title">
-                    {notification.title || "Notification"}
+            {notifications.slice(0, 5).map((notification) => {
+              const isSupportNotification =
+                notification.type === "support" ||
+                notification.relatedEntityType === "SupportTicket";
+              const supportRoute =
+                isSupportNotification && notification.relatedEntity
+                  ? `/support/${notification.relatedEntity}`
+                  : null;
+
+              return (
+                <div className="notif-row" key={notification._id}>
+                  <div className="notif-icon">
+                    <Icon name="bell" size={14} />
                   </div>
-                  <div className="notif-sub">{notification.message}</div>
+                  <div className="notif-row-body">
+                    <div className="notif-title">
+                      {notification.title || "Notification"}
+                    </div>
+                    <div className="notif-sub">{notification.message}</div>
+                    {supportRoute && (
+                      <div className="notif-action-row">
+                        <button
+                          type="button"
+                          className="notif-action-btn"
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            navigate(supportRoute);
+                          }}
+                        >
+                          Open Ticket
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                  <div className="notif-time">
+                    {new Date(notification.createdAt).toLocaleDateString()}
+                  </div>
                 </div>
-                <div className="notif-time">
-                  {new Date(notification.createdAt).toLocaleDateString()}
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
-          <button className="btn-browse" onClick={() => navigate("/messages")}>
-            Notifications Coming Soon
+          <button
+            className="btn-browse"
+            onClick={() => navigate("/notifications")}
+          >
+            View All Notifications
             <Icon name="arrow" size={13} />
           </button>
         </div>

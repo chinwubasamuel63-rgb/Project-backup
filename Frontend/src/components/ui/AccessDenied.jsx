@@ -1,6 +1,4 @@
-import { useState } from "react";
 import { ROLE_META } from "../../data/roleMeta";
-import { COLORS } from "../../data/colors";
 
 /**
  * AccessDenied Component - Role access gate UI
@@ -13,6 +11,7 @@ export default function AccessDenied({
 }) {
   const meta = ROLE_META[attemptedRole] || ROLE_META.student;
   const fallback = ROLE_META[assignedRoles[0] || "student"].home;
+  const displayName = meta.label || "User";
 
   return (
     <div className="access-denied">

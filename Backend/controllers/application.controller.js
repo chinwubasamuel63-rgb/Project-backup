@@ -92,7 +92,7 @@ export const applyToJob = async (req, res) => {
         });
       }
     } catch (error) {
-      console.error("Application submitted email failed:", error.message);
+      ;
     }
 
     try {
@@ -106,7 +106,7 @@ export const applyToJob = async (req, res) => {
         });
       }
     } catch (error) {
-      console.error("Application received email failed:", error.message);
+      ;
     }
 
     res.status(201).json({
@@ -257,7 +257,7 @@ export const acceptApplication = async (req, res) => {
         });
       }
     } catch (error) {
-      console.error("Application accepted email failed:", error.message);
+      ;
     }
 
     res.status(200).json({
@@ -330,7 +330,7 @@ export const rejectApplication = async (req, res) => {
         });
       }
     } catch (error) {
-      console.error("Application rejected email failed:", error.message);
+      ;
     }
 
     res.status(200).json({

@@ -119,7 +119,7 @@ export const navByRole = {
   student: [
     {
       id: "/dashboard",
-      label: "Student Dashboard",
+      label: "Dashboard",
       icon: Icons.dashboard,
     },
     {
@@ -142,16 +142,16 @@ export const navByRole = {
       label: "Chat",
       icon: Icons.chat,
     },
-    {
-      id: "/shop",
-      label: "Shop",
-      icon: Icons.shop,
-    },
-    {
-      id: "/hire",
-      label: "Hire Talent",
-      icon: Icons.hire,
-    },
+    // {
+    //   id: "/shop",
+    //   label: "Shop",
+    //   icon: Icons.shop,
+    // },
+    // {
+    //   id: "/hire",
+    //   label: "Hire Talent",
+    //   icon: Icons.hire,
+    // },
     {
       id: "/support",
       label: "Support",
@@ -162,8 +162,13 @@ export const navByRole = {
   instructor: [
     {
       id: "/instructor",
-      label: "Instructor Dashboard",
+      label: "Dashboard",
       icon: Icons.dashboard,
+    },
+    {
+      id: "/profile",
+      label: "Profile",
+      icon: Icons.portfolio,
     },
     {
       id: "/support-instructor",
@@ -185,38 +190,63 @@ export const navByRole = {
       label: "Cohort Chat",
       icon: Icons.chat,
     },
-    {
-      id: "/shop",
-      label: "Shop",
-      icon: Icons.shop,
-    },
-    {
-      id: "/hire",
-      label: "Hire Talent",
-      icon: Icons.hire,
-    },
-    {
-      id: "/profile",
-      label: "Profile",
-      icon: Icons.portfolio,
-    },
+    // {
+    //   id: "/shop",
+    //   label: "Shop",
+    //   icon: Icons.shop,
+    // },
+    // {
+    //   id: "/hire",
+    //   label: "Hire Talent",
+    //   icon: Icons.hire,
+    // },
   ],
 
   admin: [
     {
-      id: "/admin-dashboard",
-      label: "Admin Dashboard",
+      id: "/admin",
+      label: "Dashboard",
       icon: Icons.dashboard,
     },
     {
-      id: "/admin-users",
-      label: "Access Ledger",
+      id: "/admin/profile",
+      label: "Profile",
+      icon: Icons.portfolio,
+    },
+    {
+      id: "/admin/users",
+      label: "Users",
       icon: Icons.accessLedger,
     },
     {
-      id: "/admin-tracks",
-      label: "Track Control",
-      icon: Icons.trackControl,
+      id: "/admin/projects",
+      label: "Projects",
+      icon: Icons.portfolio,
+    },
+    {
+      id: "/messages",
+      label: "Messages",
+      icon: Icons.chat,
+    },
+    {
+      id: "/admin/support",
+      label: "Support",
+      icon: Icons.support,
+    },
+    {
+      id: "/admin/analytics",
+      label: "Analytics",
+      icon: Icons.dashboard,
+    },
+    {
+      id: "/admin/audit-logs",
+      label: "Audit logs",
+      icon: Icons.accessLedger,
+    },
+    {
+      id: "/admin/notifications",
+      label: "Notifications",
+      icon: Icons.chat,
     },
   ],
 };

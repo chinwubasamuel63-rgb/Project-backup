@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { FEED_BASE } from "./data/feedData.data";
 import { Icon } from "./Icon";
 

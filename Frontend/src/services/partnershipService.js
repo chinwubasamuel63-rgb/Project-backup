@@ -12,26 +12,6 @@ export const rejectPartnershipRequest = async (requestId) => {
   return data;
 };
 
-const handleAccept = async (requestId) => {
-  try {
-    await acceptPartnershipRequest(requestId);
-
-    setPartnerships((prev) => prev.filter((p) => p._id !== requestId));
-  } catch (error) {
-    console.error(error);
-  }
-};
-
-const handleReject = async (requestId) => {
-  try {
-    await rejectPartnershipRequest(requestId);
-
-    setPartnerships((prev) => prev.filter((p) => p._id !== requestId));
-  } catch (error) {
-    console.error(error);
-  }
-};
-
 export const getProjectPartnershipRequests = async (projectId) => {
   const { data } = await api.get(`/partnerships/project/${projectId}`);
 

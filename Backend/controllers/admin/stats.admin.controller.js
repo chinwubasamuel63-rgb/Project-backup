@@ -18,6 +18,10 @@ export const getAdminStats = async (req, res) => {
 
     startOfLast7Days.setDate(startOfLast7Days.getDate() - 7);
 
+    const startOfLast30Days = new Date(startOfToday);
+
+    startOfLast30Days.setDate(startOfLast30Days.getDate() - 30);
+
     const [
       totalUsers,
       students,
@@ -25,10 +29,12 @@ export const getAdminStats = async (req, res) => {
       admins,
       suspended,
       banned,
+      activeUsers,
       newToday,
       newThisWeek,
 
       totalProjects,
+      activeProjects,
 
       totalTickets,
       openTickets,
@@ -50,6 +56,12 @@ export const getAdminStats = async (req, res) => {
       User.countDocuments({ isBanned: true }),
 
       User.countDocuments({
+        lastLoginAt: {
+          $gte: startOfLast30Days,
+        },
+      }),
+
+      User.countDocuments({
         createdAt: {
           $gte: startOfToday,
         },
@@ -62,6 +74,12 @@ export const getAdminStats = async (req, res) => {
       }),
 
       Project.countDocuments(),
+
+      Project.countDocuments({
+        status: {
+          $in: ["Building", "Testing", "Launched"],
+        },
+      }),
 
       SupportTicket.countDocuments(),
       SupportTicket.countDocuments({
@@ -113,10 +131,12 @@ export const getAdminStats = async (req, res) => {
         banned,
         newToday,
         newThisWeek,
+        active: activeUsers,
       },
 
       projects: {
         total: totalProjects,
+        active: activeProjects,
       },
 
       support: {
@@ -138,7 +158,7 @@ export const getAdminStats = async (req, res) => {
   } catch (error) {
     return res.status(500).json({
       success: false,
-      message: error.message,
+      message: "Unable to load admin statistics",
     });
   }
 };

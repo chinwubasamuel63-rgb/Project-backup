@@ -1,7 +1,7 @@
 import express from "express";
 import { protect } from "../middleware/authMiddleware.js";
 import { checkAccountStatus } from "../middleware/accountStatusMiddleware.js";
-import upload from "../middleware/upload.middleware.js";
+import upload, { handleMulterError } from "../middleware/upload.middleware.js";
 import {
   createProject,
   getProjects,
@@ -63,6 +63,7 @@ router.patch(
   "/:projectId/images",
   protect,
   upload.array("images", 5),
+  handleMulterError,
   uploadProjectImages,
 );
 router.delete("/:projectId/images", protect, deleteProjectImage);

@@ -1,5 +1,7 @@
 import mongoose from "mongoose";
 import User from "../../models/User.js";
+import Project from "../../models/Project.js";
+import SupportTicket from "../../models/SupportTicket.js";
 import { sendEmail } from "../../services/email.service.js";
 import createAuditLog from "../../utils/createAuditLog.js";
 import {
@@ -9,6 +11,40 @@ import {
   accountBannedEmail,
   accountUnbannedEmail,
 } from "../../templates/emails/securityEmails.js";
+
+const ADMIN_USER_FIELDS = [
+  "username",
+  "email",
+  "role",
+  "authProvider",
+  "primaryTrack",
+  "secondaryTracks",
+  "avatar",
+  "coverImage",
+  "bio",
+  "isVerified",
+  "displayName",
+  "skills",
+  "experienceLevel",
+  "portfolioUrl",
+  "githubUrl",
+  "linkedinUrl",
+  "isOnline",
+  "lastSeen",
+  "isSuspended",
+  "suspendedAt",
+  "suspensionExpiresAt",
+  "suspensionReason",
+  "isBanned",
+  "bannedAt",
+  "banReason",
+  "lastLoginAt",
+  "flags",
+  "adminNotes",
+  "moderationHistory",
+  "createdAt",
+  "updatedAt",
+].join(" ");
 
 export const getAllUsers = async (req, res) => {
   try {
@@ -70,7 +106,7 @@ export const getAllUsers = async (req, res) => {
     const totalUsers = await User.countDocuments(query);
 
     const users = await User.find(query)
-      .select("-password")
+      .select(ADMIN_USER_FIELDS)
       .sort({
         createdAt: sort === "oldest" ? 1 : -1,
       })
@@ -92,7 +128,58 @@ export const getAllUsers = async (req, res) => {
   } catch (error) {
     res.status(500).json({
       success: false,
-      message: error.message,
+      message: "Unable to load admin users",
+    });
+  }
+};
+
+export const getUserDetailsAdmin = async (req, res) => {
+  try {
+    const { userId } = req.params;
+
+    if (!mongoose.Types.ObjectId.isValid(userId)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid user ID",
+      });
+    }
+
+    const [user, projects, supportTickets] = await Promise.all([
+      User.findById(userId).select(ADMIN_USER_FIELDS),
+      Project.find({
+        $or: [{ owner: userId }, { members: userId }],
+      })
+        .select(
+          "name tagline status visibility owner members createdAt updatedAt",
+        )
+        .populate("owner", "username email")
+        .sort({ updatedAt: -1 }),
+      SupportTicket.find({
+        $or: [{ student: userId }, { assignedInstructor: userId }],
+      })
+        .select(
+          "ticketNumber title status priority createdAt updatedAt resolvedAt",
+        )
+        .sort({ createdAt: -1 }),
+    ]);
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found",
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      user,
+      projects,
+      supportTickets,
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: "Unable to process admin user request",
     });
   }
 };
@@ -127,6 +214,13 @@ export const updateUserRole = async (req, res) => {
       });
     }
 
+    if (req.user._id.toString() === userId) {
+      return res.status(400).json({
+        success: false,
+        message: "You cannot change your own role",
+      });
+    }
+
     if (
       process.env.ADMIN_EMAIL &&
       user.email.toLowerCase() === process.env.ADMIN_EMAIL.toLowerCase() &&
@@ -138,11 +232,15 @@ export const updateUserRole = async (req, res) => {
       });
     }
 
-    if (req.user._id.toString() === userId && role !== "admin") {
-      return res.status(400).json({
-        success: false,
-        message: "You cannot remove your own admin role",
-      });
+    if (user.role === "admin" && role !== "admin") {
+      const adminCount = await User.countDocuments({ role: "admin" });
+
+      if (adminCount <= 1) {
+        return res.status(400).json({
+          success: false,
+          message: "The final admin account cannot be demoted",
+        });
+      }
     }
 
     if (user.role === role) {
@@ -152,6 +250,7 @@ export const updateUserRole = async (req, res) => {
       });
     }
 
+    const previousRole = user.role;
     user.role = role;
 
     await user.save();
@@ -160,7 +259,10 @@ export const updateUserRole = async (req, res) => {
       admin: req.user._id,
       action: "ROLE_CHANGED",
       targetUser: user._id,
-      details: `Role changed to ${role}`,
+      details: JSON.stringify({
+        previous: { role: previousRole },
+        next: { role },
+      }),
     });
 
     try {
@@ -169,11 +271,9 @@ export const updateUserRole = async (req, res) => {
         subject: "Role Updated",
         html: roleChangedEmail(role),
       });
-    } catch (error) {
-      console.error("Role change email failed:", error.message);
-    }
+    } catch (error) {}
 
-    const safeUser = await User.findById(userId).select("-password");
+    const safeUser = await User.findById(userId).select(ADMIN_USER_FIELDS);
 
     res.status(200).json({
       success: true,
@@ -183,7 +283,7 @@ export const updateUserRole = async (req, res) => {
   } catch (error) {
     res.status(500).json({
       success: false,
-      message: error.message,
+      message: "Unable to update admin user",
     });
   }
 };
@@ -193,6 +293,8 @@ export const adminUserAction = async (req, res) => {
     const { userId } = req.params;
 
     const { action, reason = "", note } = req.body;
+    const reasonText = typeof reason === "string" ? reason.trim() : "";
+    const noteText = typeof note === "string" ? note.trim() : "";
 
     if (!mongoose.Types.ObjectId.isValid(userId)) {
       return res.status(400).json({
@@ -226,6 +328,13 @@ export const adminUserAction = async (req, res) => {
         message: "User not found",
       });
     }
+
+    const previousState = {
+      role: user.role,
+      isBanned: user.isBanned,
+      isSuspended: user.isSuspended,
+      flags: user.flags,
+    };
 
     // Primary admin protection
     if (
@@ -263,228 +372,163 @@ export const adminUserAction = async (req, res) => {
     switch (action) {
       case "suspend": {
         if (user.isSuspended) {
-          return res.status(400).json({
-            success: false,
-            message: "User is already suspended",
-          });
+          return res
+            .status(400)
+            .json({ success: false, message: "User is already suspended" });
         }
-
         const { expiresAt } = req.body;
-
-        if (!expiresAt) {
-          return res.status(400).json({
-            success: false,
-            message: "Expiration date is required",
-          });
-        }
-
         const expirationDate = new Date(expiresAt);
-
-        if (expirationDate <= new Date()) {
-          return res.status(400).json({
-            success: false,
-            message: "Expiration date must be in the future",
-          });
+        if (
+          !expiresAt ||
+          Number.isNaN(expirationDate.getTime()) ||
+          expirationDate <= new Date()
+        ) {
+          return res
+            .status(400)
+            .json({
+              success: false,
+              message: "A future suspension expiration is required",
+            });
         }
-
-        if (!reason.trim()) {
-          return res.status(400).json({
-            success: false,
-            message: "Suspension reason is required",
-          });
+        if (!reasonText) {
+          return res
+            .status(400)
+            .json({ success: false, message: "Suspension reason is required" });
         }
-
         user.isSuspended = true;
         user.suspendedAt = new Date();
         user.suspensionExpiresAt = expirationDate;
-        user.suspensionReason = reason;
-
+        user.suspensionReason = reasonText;
         user.moderationHistory.push({
           action: "suspend",
-          reason,
+          reason: reasonText,
           performedBy: req.user._id,
         });
-
-        await createAuditLog({
-          admin: req.user._id,
-          action: "USER_SUSPENDED",
-          targetUser: user._id,
-          details: reason,
-        });
-
         break;
       }
-
       case "unsuspend": {
         if (!user.isSuspended) {
-          return res.status(400).json({
-            success: false,
-            message: "User is not suspended",
-          });
+          return res
+            .status(400)
+            .json({ success: false, message: "User is not suspended" });
         }
-
         user.isSuspended = false;
         user.suspendedAt = null;
         user.suspensionExpiresAt = null;
         user.suspensionReason = "";
-
         user.moderationHistory.push({
           action: "unsuspend",
-          reason,
+          reason: reasonText,
           performedBy: req.user._id,
         });
-
-        await createAuditLog({
-          admin: req.user._id,
-          action: "USER_UNSUSPENDED",
-          targetUser: user._id,
-          details: reason,
-        });
-
         break;
       }
-
       case "ban": {
         if (user.isBanned) {
-          return res.status(400).json({
-            success: false,
-            message: "User is already banned",
-          });
+          return res
+            .status(400)
+            .json({ success: false, message: "User is already banned" });
         }
-
-        if (!reason.trim()) {
-          return res.status(400).json({
-            success: false,
-            message: "Ban reason is required",
-          });
+        if (!reasonText) {
+          return res
+            .status(400)
+            .json({ success: false, message: "Ban reason is required" });
         }
-
         user.isBanned = true;
         user.bannedAt = new Date();
-        user.banReason = reason;
-
+        user.banReason = reasonText;
         user.isSuspended = false;
         user.suspendedAt = null;
         user.suspensionExpiresAt = null;
         user.suspensionReason = "";
-
         user.moderationHistory.push({
           action: "ban",
-          reason,
+          reason: reasonText,
           performedBy: req.user._id,
         });
-
-        await createAuditLog({
-          admin: req.user._id,
-          action: "USER_BANNED",
-          targetUser: user._id,
-          details: reason,
-        });
-
         break;
       }
-
       case "unban": {
         if (!user.isBanned) {
-          return res.status(400).json({
-            success: false,
-            message: "User is not banned",
-          });
+          return res
+            .status(400)
+            .json({ success: false, message: "User is not banned" });
         }
-
         user.isBanned = false;
         user.bannedAt = null;
         user.banReason = "";
-
         user.moderationHistory.push({
           action: "unban",
-          reason,
+          reason: reasonText,
           performedBy: req.user._id,
         });
-
-        await createAuditLog({
-          admin: req.user._id,
-          action: "USER_UNBANNED",
-          targetUser: user._id,
-          details: reason,
-        });
-
         break;
       }
-
       case "addFlag": {
         user.flags += 1;
-
         user.moderationHistory.push({
           action: "addFlag",
-          reason,
+          reason: reasonText,
           performedBy: req.user._id,
         });
-
-        await createAuditLog({
-          admin: req.user._id,
-          action: "FLAG_ADDED",
-          targetUser: user._id,
-          details: reason,
-        });
-
         break;
       }
-
       case "removeFlag": {
         user.flags = Math.max(0, user.flags - 1);
-
         user.moderationHistory.push({
           action: "removeFlag",
-          reason,
+          reason: reasonText,
           performedBy: req.user._id,
         });
-
-        await createAuditLog({
-          admin: req.user._id,
-          action: "FLAG_REMOVED",
-          targetUser: user._id,
-          details: reason,
-        });
-
         break;
       }
-
       case "addNote": {
-        if (!note?.trim()) {
-          return res.status(400).json({
-            success: false,
-            message: "Note is required",
-          });
+        if (!noteText) {
+          return res
+            .status(400)
+            .json({ success: false, message: "Note is required" });
         }
-
-        user.adminNotes.push({
-          note: note.trim(),
-          addedBy: req.user._id,
-        });
-
+        user.adminNotes.push({ note: noteText, addedBy: req.user._id });
         user.moderationHistory.push({
           action: "addNote",
           reason: "Admin note added",
           performedBy: req.user._id,
         });
-
-        await createAuditLog({
-          admin: req.user._id,
-          action: "ADMIN_NOTE_ADDED",
-          targetUser: user._id,
-          details: note,
-        });
-
         break;
       }
     }
 
     await user.save();
 
+    const auditActions = {
+      suspend: "USER_SUSPENDED",
+      unsuspend: "USER_UNSUSPENDED",
+      ban: "USER_BANNED",
+      unban: "USER_UNBANNED",
+      addFlag: "FLAG_ADDED",
+      removeFlag: "FLAG_REMOVED",
+      addNote: "ADMIN_NOTE_ADDED",
+    };
+
+    await createAuditLog({
+      admin: req.user._id,
+      action: auditActions[action],
+      targetUser: user._id,
+      details: JSON.stringify({
+        previous: previousState,
+        next: {
+          role: user.role,
+          isBanned: user.isBanned,
+          isSuspended: user.isSuspended,
+          flags: user.flags,
+        },
+        reason: reasonText || noteText,
+      }),
+    });
+
     // Email notifications remain unchanged...
 
-    const safeUser = await User.findById(user._id).select("-password");
+    const safeUser = await User.findById(user._id).select(ADMIN_USER_FIELDS);
 
     res.status(200).json({
       success: true,
@@ -494,7 +538,7 @@ export const adminUserAction = async (req, res) => {
   } catch (error) {
     res.status(500).json({
       success: false,
-      message: error.message,
+      message: "Unable to process admin user action",
     });
   }
 };

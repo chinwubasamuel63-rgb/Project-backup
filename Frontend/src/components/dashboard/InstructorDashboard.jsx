@@ -2,7 +2,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { COLORS } from "../../data/colors";
-import { SupportInstructor } from "../support/Support";
 import { getProducts } from "../../services/productService";
 import { getJobs } from "../../services/jobService";
 import { joinStream } from "../../services/streamService";
@@ -15,7 +14,7 @@ import {
   getMyPartnershipRequests,
   getMyConversations,
   getNotifications,
-  getMyTickets,
+  getAssignedTickets,
   getStreams,
 } from "../../services/dashboardService";
 import "./dashboard.css";
@@ -225,21 +224,82 @@ function Sparkline({ data, color }) {
   );
 }
 
-function Avatar({ name, size = 26 }) {
+function Avatar({ name, avatar, size = 26 }) {
   if (!name) return null;
+
+  if (avatar?.url) {
+    return (
+      <img
+        src={avatar.url}
+        className="mini-avatar"
+        style={{
+          width: size,
+          height: size,
+        }}
+        alt={name}
+      />
+    );
+  }
+
   const initials = name
     .split(" ")
     .filter(Boolean)
     .map((n) => n[0])
     .slice(0, 2)
     .join("");
+
   return (
     <div
       className="mini-avatar"
-      style={{ width: size, height: size, fontSize: size * 0.4 }}
+      style={{
+        width: size,
+        height: size,
+        fontSize: size * 0.4,
+      }}
     >
       {initials}
     </div>
+  );
+}
+
+function getConversationDisplayName(conversation, currentUserId) {
+  const conversationType = String(
+    conversation?.conversationType || conversation?.type || "",
+  ).toLowerCase();
+
+  // For support conversations, show the ticket number from the name field
+  if (conversationType === "support" && conversation?.name?.trim()) {
+    return conversation.name;
+  }
+
+  const participants = Array.isArray(conversation?.participants)
+    ? conversation.participants
+    : [];
+
+  const otherParticipants = participants.filter(
+    (participant) =>
+      String(participant?._id || participant?.id || participant) !==
+      String(currentUserId),
+  );
+
+  const preferredName =
+    otherParticipants.find((participant) => participant?.username?.trim()) ||
+    otherParticipants.find((participant) => participant?.name?.trim()) ||
+    (conversation?.name?.trim() && conversation.name !== "Conversation"
+      ? conversation.name
+      : null);
+
+  if (typeof preferredName === "object") {
+    return preferredName.username || preferredName.name || "User";
+  }
+
+  return preferredName || "User";
+}
+
+function hasConversationMessage(conversation) {
+  return Boolean(
+    conversation?.lastMessage?.content?.trim() ||
+    conversation?.lastMessage?.attachments?.length,
   );
 }
 
@@ -411,16 +471,17 @@ function StreamArt({ variant }) {
 }
 
 // ===========================================================
-// InstructorDashboard — Live Production Version
+// InstructorDashboard — React Router Integrated Version
 // ===========================================================
-export function InstructorDashboard({ setView, notify }) {
+export function InstructorDashboard({ notify }) {
+  const navigate = useNavigate(); // Hook added to handle real path switches
   const [projects, setProjects] = useState([]);
   const [streams, setStreams] = useState([]);
   const [partnerships, setPartnerships] = useState([]);
   const [conversations, setConversations] = useState([]);
   const [jobs, setJobs] = useState([]);
   const [products, setProducts] = useState([]);
-  const [tickets, setTickets] = useState(null);
+  const [tickets, setTickets] = useState([]);
   const [notifications, setNotifications] = useState([]);
 
   const [loading, setLoading] = useState(true);
@@ -428,6 +489,22 @@ export function InstructorDashboard({ setView, notify }) {
 
   useEffect(() => {
     let isMounted = true;
+
+    const syncNotifications = async () => {
+      try {
+        const resNotifications = await getNotifications();
+        if (isMounted) {
+          const sortedNotifications = (resNotifications.notifications || [])
+            .slice()
+            .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+            .slice(0, 5);
+
+          setNotifications(sortedNotifications);
+        }
+      } catch (err) {
+        console.error("Instructor dashboard notification sync error:", err);
+      }
+    };
 
     async function loadDashboardData() {
       try {
@@ -445,37 +522,46 @@ export function InstructorDashboard({ setView, notify }) {
           getMyPartnershipRequests(),
           getMyConversations(),
           getNotifications(),
-          getMyTickets(),
+          getAssignedTickets(),
           getStreams(),
           getJobs(),
           getProducts(),
         ]);
 
         if (isMounted) {
-          // Defensive check: extract array if wrapped in an object (e.g., resProjects.data)
-          const extractArray = (res) => {
-            if (!res) return [];
-            if (Array.isArray(res)) return res;
-            if (res.data && Array.isArray(res.data)) return res.data;
-            if (res.projects && Array.isArray(res.projects))
-              return res.projects;
-            return [];
-          };
+          const sortedNotifications = (resNotifications.notifications || [])
+            .slice()
+            .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+            .slice(0, 5);
 
-          setProjects(extractArray(resProjects));
-          setPartnerships(extractArray(resPartnerships));
-          setConversations(extractArray(resConversations));
-          setNotifications(extractArray(resNotifications));
-          setStreams(extractArray(resStreams));
-          setJobs(extractArray(resJobs));
-          setProducts(extractArray(resProducts));
+          setProjects(resProjects.projects || []);
 
-          // Handle tickets object separately
-          setTickets(
-            resTickets?.data ||
-              resTickets || { open: 0, awaiting: 0, resolved: 0 },
+          setPartnerships(
+            resPartnerships.requests ||
+              resPartnerships.partnershipRequests ||
+              [],
           );
 
+          setConversations(
+            (resConversations.conversations || []).filter(
+              hasConversationMessage,
+            ),
+          );
+
+          setNotifications(sortedNotifications);
+
+          setTickets(resTickets.tickets || []);
+
+          setStreams(
+            (resStreams.streams || []).filter((stream) => {
+              const status = String(stream?.status || "").toLowerCase();
+              return status === "live" || status === "started";
+            }),
+          );
+
+          setJobs(resJobs.jobs || []);
+
+          setProducts(resProducts.products || []);
           setLoading(false);
         }
       } catch (err) {
@@ -487,15 +573,41 @@ export function InstructorDashboard({ setView, notify }) {
     }
 
     loadDashboardData();
+
+    const handleNotificationsUpdated = () => {
+      syncNotifications();
+    };
+
+    window.addEventListener(
+      "devstream:notifications-updated",
+      handleNotificationsUpdated,
+    );
+
     return () => {
       isMounted = false;
+      window.removeEventListener(
+        "devstream:notifications-updated",
+        handleNotificationsUpdated,
+      );
     };
   }, []);
+
+  const openTickets = tickets.filter((ticket) =>
+    ["Open", "Claimed", "In Progress"].includes(ticket.status),
+  ).length;
+
+  const awaitingTickets = tickets.filter(
+    (ticket) => ticket.status === "Waiting For Student",
+  ).length;
+
+  const resolvedTickets = tickets.filter((ticket) =>
+    ["Resolved", "Closed"].includes(ticket.status),
+  ).length;
 
   const handleAcceptPartnership = async (id, requesterName) => {
     try {
       await acceptPartnershipRequest(id);
-      setPartnerships((prev) => prev.filter((x) => x.id !== id));
+      setPartnerships((prev) => prev.filter((x) => (x._id || x.id) !== id));
       if (notify) notify(`Accepted ${requesterName}'s partnership request.`);
     } catch (err) {
       if (notify) notify(`Error accepting partnership: ${err.message}`);
@@ -505,21 +617,36 @@ export function InstructorDashboard({ setView, notify }) {
   const handleRejectPartnership = async (id, requesterName) => {
     try {
       await rejectPartnershipRequest(id);
-      setPartnerships((prev) => prev.filter((x) => x.id !== id));
+      setPartnerships((prev) => prev.filter((x) => (x._id || x.id) !== id));
       if (notify) notify(`Rejected ${requesterName}'s partnership request.`);
     } catch (err) {
       if (notify) notify(`Error rejecting partnership: ${err.message}`);
     }
   };
 
-  const handleJoinStream = async (streamId) => {
+  const handleJoinStream = async (stream) => {
     try {
-      await joinStream(streamId);
-      if (setView) setView("live");
+      await joinStream(stream._id || stream.id);
+
+      if (stream.role === "host" || stream.role === "speaker") {
+        navigate(`/streams/${stream._id || stream.id}/studio`);
+      } else {
+        navigate(`/streams/${stream._id || stream.id}/watch`);
+      }
     } catch (err) {
-      if (notify) notify(`Could not join stream: ${err.message}`);
+      if (notify) {
+        notify(`Could not join stream: ${err.message}`);
+      }
     }
   };
+
+  if (error) {
+    return (
+      <div className="page-wrap">
+        <div className="glass-card">Dashboard Error: {error}</div>
+      </div>
+    );
+  }
 
   if (loading) {
     return (
@@ -529,24 +656,6 @@ export function InstructorDashboard({ setView, notify }) {
     );
   }
 
-  if (error) {
-    return (
-      <div className="dashboard-stage error-stage">
-        <div className="error-box glass-card">
-          <h4>Ecosystem Sync Failure</h4>
-          <p>{error}</p>
-          <button
-            className="btn-go-live"
-            onClick={() => window.location.reload()}
-          >
-            Retry Core Connection
-          </button>
-        </div>
-      </div>
-    );
-  }
-
-  // Derived aggregates matching the exact shape of your visual metrics cards
   const activeStats = [
     {
       label: "Total Projects",
@@ -554,7 +663,7 @@ export function InstructorDashboard({ setView, notify }) {
       sub: "Managed services",
       icon: "folder",
       color: COLORS.purple || "#a855f7",
-      data: [0, 2, projects.length],
+      data: [0, Math.ceil(projects.length / 2), projects.length],
     },
     {
       label: "Partnerships",
@@ -562,7 +671,7 @@ export function InstructorDashboard({ setView, notify }) {
       sub: "Pending responses",
       icon: "partner",
       color: COLORS.blue || "#38bdf8",
-      data: [0, 4, partnerships.length],
+      data: [0, Math.ceil(partnerships.length / 2), partnerships.length],
     },
     {
       label: "Conversations",
@@ -570,7 +679,7 @@ export function InstructorDashboard({ setView, notify }) {
       sub: "Active channels",
       icon: "chat",
       color: COLORS.green || "#34d399",
-      data: [0, 1, conversations.length],
+      data: [0, Math.ceil(conversations.length / 2), conversations.length],
     },
     {
       label: "Alerts",
@@ -578,7 +687,7 @@ export function InstructorDashboard({ setView, notify }) {
       sub: "Unread alerts",
       icon: "bell",
       color: COLORS.orange || "#f97316",
-      data: [0, 3, notifications.length],
+      data: [0, Math.ceil(notifications.length / 2), notifications.length],
     },
   ];
 
@@ -620,28 +729,41 @@ export function InstructorDashboard({ setView, notify }) {
               <h3>My Projects</h3>
               <button
                 className="view-all-link"
-                onClick={() => setView && setView("marketplace")}
+                onClick={() => navigate("/projects")}
               >
                 View All
               </button>
             </div>
             <div className="manage-row-list">
               {projects.slice(0, 3).map((p) => (
-                <div className="manage-row" key={p.id || p._id}>
-                  <ProjectArt variant={p.art || "nexus"} />
+                <div
+                  className="manage-row project-clickable"
+                  key={p.id || p._id}
+                  onClick={() => navigate(`/projects/${p._id || p.id}`)}
+                >
+                  <div className="project-card-image">
+                    {p.coverImage?.url ? (
+                      <img
+                        src={p.coverImage?.url}
+                        alt={p.name}
+                        className="project-cover-image"
+                      />
+                    ) : (
+                      <ProjectArt variant="nexus" />
+                    )}
+                  </div>
                   <div className="manage-row-body">
                     <div className="manage-row-title">{p.name}</div>
                     <div className="manage-row-desc">
-                      {p.desc || p.description}
+                      {p.tagline || p.description || "No description available"}
                     </div>
                     <div className="avatar-stack">
-                      {Array.from({
-                        length: Math.min(
-                          p.members?.length || p.members || 0,
-                          3,
-                        ),
-                      }).map((_, i) => (
-                        <Avatar key={i} name={p.name + i} size={20} />
+                      {p.members?.slice(0, 3).map((member) => (
+                        <Avatar
+                          key={member._id}
+                          name={member.username}
+                          size={20}
+                        />
                       ))}
                       {(p.members?.length || p.members || 0) > 3 && (
                         <span className="avatar-more">
@@ -657,19 +779,21 @@ export function InstructorDashboard({ setView, notify }) {
                     <div className="manage-row-stat-label">Members</div>
                   </div>
                   <div className="manage-row-stat">
-                    <div className="manage-row-stat-value">{p.apps || 0}</div>
+                    <div className="manage-row-stat-value">
+                      {p.partnershipCount || 0}
+                    </div>
                     <div className="manage-row-stat-label">
-                      Partnership Apps
+                      Partnership Application
                     </div>
                   </div>
                   <button
                     className="btn-manage"
-                    onClick={() => setView && setView("marketplace")}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      navigate(`/projects/${p._id || p.id}`);
+                    }}
                   >
                     Manage
-                  </button>
-                  <button className="btn-row-more" title="More options">
-                    <Icon name="more" size={16} />
                   </button>
                 </div>
               ))}
@@ -684,60 +808,50 @@ export function InstructorDashboard({ setView, notify }) {
           <div className="glass-card panel-block">
             <div className="panel-header">
               <h3>Live Streams</h3>
-              <div className="stream-toolbar">
-                <button
-                  className="btn-go-live"
-                  onClick={() => setView && setView("live")}
-                >
-                  <Icon name="wifi" size={13} /> Go Live
-                </button>
-                <button
-                  className="btn-stream-settings"
-                  onClick={() => setView && setView("live")}
-                >
-                  <Icon name="settings" size={13} /> Stream Settings
-                </button>
-              </div>
+              <button
+                className="view-all-link"
+                onClick={() => navigate("/live")}
+              >
+                View All
+              </button>
             </div>
             <div className="stream-list">
-              {streams.slice(0, 3).map((s) => (
-                <div className="stream-row" key={s.id || s._id}>
-                  <div className="stream-thumb-wrap">
-                    <StreamArt variant={s.art || "orb"} />
-                    <span className="live-chip">LIVE</span>
-                  </div>
-                  <div className="stream-row-body">
-                    <div className="stream-title">{s.title}</div>
-                    <div className="stream-desc">{s.desc || s.description}</div>
-                    <div className="stream-host">
-                      <Avatar name={s.host} size={18} /> {s.host}
-                      <span className="stream-dot">•</span> {s.viewers || 0}{" "}
-                      watching
+              {streams.length === 0 ? (
+                <div className="empty-row">No live streams currently.</div>
+              ) : (
+                streams.slice(0, 5).map((stream) => (
+                  <div className="stream-row" key={stream._id}>
+                    <div className="stream-thumb-wrap">
+                      <StreamArt variant="default" />
+                      <span className="live-chip">LIVE</span>
+                      <span className="viewer-chip">
+                        <Icon name="eye" size={11} /> {stream.totalViewers || 0}
+                      </span>
                     </div>
+                    <div className="stream-row-body">
+                      <div className="stream-title">{stream.title}</div>
+                      <div className="stream-host">
+                        <Avatar
+                          name={stream.host?.username || "Host"}
+                          avatar={stream.host?.avatar?.url}
+                          size={18}
+                        />
+                        {stream.host?.username || "Unknown Host"}
+                      </div>
+                      <div className="stream-watching">
+                        {stream.totalViewers || 0} watching
+                      </div>
+                    </div>
+                    <button
+                      className="btn-join-stream"
+                      onClick={() => handleJoinStream(stream._id)}
+                    >
+                      Join Stream
+                    </button>
                   </div>
-                  <button
-                    className="btn-manage-stream"
-                    onClick={() => handleJoinStream(s.id || s._id)}
-                  >
-                    Join Stream
-                  </button>
-                  <button className="btn-row-more" title="More options">
-                    <Icon name="more" size={16} />
-                  </button>
-                </div>
-              ))}
-              {streams.length === 0 && (
-                <div className="empty-row">
-                  No active streams on the network.
-                </div>
+                ))
               )}
             </div>
-            <button
-              className="btn-browse"
-              onClick={() => setView && setView("live")}
-            >
-              View All Streams <Icon name="arrow" size={13} />
-            </button>
           </div>
         </section>
 
@@ -746,29 +860,32 @@ export function InstructorDashboard({ setView, notify }) {
           <div className="glass-card panel-block-sm">
             <div className="panel-header">
               <h3>Partnership Requests</h3>
-              <button
-                className="view-all-link"
-                onClick={() => setView && setView("messages")}
-              >
-                View All
-              </button>
             </div>
             <div className="list-rows-sm">
               {partnerships.slice(0, 2).map((p) => (
                 <div className="partner-row-sm" key={p.id || p._id}>
-                  <Avatar name={p.name} size={30} />
+                  <Avatar name={p.applicant?.username} size={30} />
                   <div className="partner-row-sm-body">
-                    <div className="partner-row-sm-name">{p.name}</div>
-                    <div className="partner-row-sm-role">{p.role}</div>
+                    <div className="partner-row-sm-name">
+                      {p.applicant?.username || "Unknown User"}
+                    </div>
+                    <div className="partner-row-sm-role">
+                      Partnership Request
+                    </div>
                     <div className="partner-row-sm-meta">
                       <span>Requested Role: {p.role}</span>
-                      <span>Project: {p.project}</span>
+                      <span>
+                        Project: {p.project?.name || "Unknown Project"}
+                      </span>
                     </div>
                     <div className="partner-row-sm-actions">
                       <button
                         className="btn-accept"
                         onClick={() =>
-                          handleAcceptPartnership(p.id || p._id, p.name)
+                          handleAcceptPartnership(
+                            p._id || p.id,
+                            p.applicant?.username || "user",
+                          )
                         }
                       >
                         Accept
@@ -776,7 +893,10 @@ export function InstructorDashboard({ setView, notify }) {
                       <button
                         className="btn-reject"
                         onClick={() =>
-                          handleRejectPartnership(p.id || p._id, p.name)
+                          handleRejectPartnership(
+                            p._id || p.id,
+                            p.applicant?.username || "user",
+                          )
                         }
                       >
                         Reject
@@ -786,12 +906,12 @@ export function InstructorDashboard({ setView, notify }) {
                 </div>
               ))}
               {partnerships.length === 0 && (
-                <div className="empty-row">No pending applications.</div>
+                <div className="empty-row">No pending request.</div>
               )}
             </div>
             <button
               className="btn-browse"
-              onClick={() => setView && setView("messages")}
+              onClick={() => navigate("/projects")}
             >
               View All Requests <Icon name="arrow" size={13} />
             </button>
@@ -800,50 +920,45 @@ export function InstructorDashboard({ setView, notify }) {
           <div className="glass-card panel-block-sm">
             <div className="panel-header">
               <h3>Messages</h3>
-              <button
-                className="view-all-link"
-                onClick={() => setView && setView("messages")}
-              >
-                View All
-              </button>
             </div>
             <div className="list-rows-sm">
-              {conversations.slice(0, 3).map((m) => (
-                <button
-                  className="message-row"
-                  key={m.id || m._id}
-                  onClick={() => setView && setView("messages")}
-                  style={{
-                    background: "none",
-                    border: "none",
-                    width: "100%",
-                    textAlign: "left",
-                  }}
-                >
-                  <Avatar name={m.name || m.participant} size={30} />
-                  <div className="message-row-body">
-                    <div className="message-name">
-                      {m.name || m.participant}
+              {conversations.slice(0, 3).map((m) => {
+                const displayName = getConversationDisplayName(m, null);
+                return (
+                  <button
+                    className="message-row"
+                    key={m.id || m._id}
+                    onClick={() => navigate("/instructor/cohort-chat")}
+                    style={{
+                      background: "none",
+                      border: "none",
+                      width: "100%",
+                      textAlign: "left",
+                    }}
+                  >
+                    <Avatar name={displayName} size={30} />
+                    <div className="message-row-body">
+                      <div className="message-name">{displayName}</div>
+                      <div className="message-text">
+                        {m.lastMessage?.content || "Shared attachment"}
+                      </div>
                     </div>
-                    <div className="message-text">
-                      {m.text || m.lastMessage}
+                    <div className="message-meta">
+                      <span className="message-time">{m.time || "Recent"}</span>
+                      {(m.unread || 0) > 0 && (
+                        <span className="message-unread">{m.unread}</span>
+                      )}
                     </div>
-                  </div>
-                  <div className="message-meta">
-                    <span className="message-time">{m.time || "Recent"}</span>
-                    {(m.unread || 0) > 0 && (
-                      <span className="message-unread">{m.unread}</span>
-                    )}
-                  </div>
-                </button>
-              ))}
+                  </button>
+                );
+              })}
               {conversations.length === 0 && (
                 <div className="empty-row">No active direct conversations.</div>
               )}
             </div>
             <button
               className="btn-browse"
-              onClick={() => setView && setView("messages")}
+              onClick={() => navigate("/messages")}
             >
               Go to Messages <Icon name="arrow" size={13} />
             </button>
@@ -851,65 +966,38 @@ export function InstructorDashboard({ setView, notify }) {
 
           <div className="glass-card panel-block-sm">
             <div className="panel-header">
-              <h3>Hiring Overview</h3>
-              <button
-                className="view-all-link"
-                onClick={() => setView && setView("marketplace")}
-              >
-                View All
-              </button>
+              <h3>Hiring Opportunities</h3>
             </div>
-            <div className="overview-mini-grid">
-              <div className="overview-mini-stat">
-                <div className="overview-mini-value">{jobs.length}</div>
-                <div className="overview-mini-label">Jobs Posted</div>
-                <div className="overview-mini-sub">Active Openings</div>
-              </div>
-              <div className="overview-mini-stat">
-                <div className="overview-mini-value">
-                  {jobs.reduce(
-                    (acc, curr) => acc + (curr.applications || 0),
-                    0,
-                  )}
-                </div>
-                <div className="overview-mini-label">Applications</div>
-                <div className="overview-mini-sub">Total Received</div>
-              </div>
-            </div>
-            <div className="overview-section-label">Recent Job Posts</div>
             <div className="list-rows-sm">
-              {jobs.slice(0, 2).map((j) => (
-                <div className="job-row" key={j.id || j._id}>
-                  <div className="job-row-body">
-                    <div className="job-title">{j.title}</div>
-                    <div className="job-company">{j.type || j.department}</div>
+              {jobs.slice(0, 4).map((job) => (
+                <div className="job-row" key={job._id}>
+                  <div className="job-icon">
+                    <Icon name="partner" size={15} />
                   </div>
-                  <span className="job-app-count">
-                    {j.applications || 0} Apps
+                  <div className="job-row-body">
+                    <div className="job-title">{job.title}</div>
+                    <div className="job-company">
+                      {job.location || "DevStream Nexus"}
+                    </div>
+                  </div>
+                  <span
+                    className={`job-type ${
+                      job.isRemote ? "job-type-remote" : "job-type-onsite"
+                    }`}
+                  >
+                    {job.roleType}
                   </span>
                 </div>
               ))}
-              {jobs.length === 0 && (
-                <div className="empty-row">No jobs listed on the platform.</div>
-              )}
             </div>
-            <button
-              className="btn-browse"
-              onClick={() => setView && setView("marketplace")}
-            >
-              Manage Jobs <Icon name="arrow" size={13} />
+            <button className="btn-browse" onClick={() => navigate("/hire")}>
+              Browse All Jobs <Icon name="arrow" size={13} />
             </button>
           </div>
 
           <div className="glass-card panel-block-sm">
             <div className="panel-header">
               <h3>Marketplace</h3>
-              <button
-                className="view-all-link"
-                onClick={() => setView && setView("marketplace")}
-              >
-                View All
-              </button>
             </div>
             <div className="overview-mini-grid">
               <div className="overview-mini-stat">
@@ -936,7 +1024,9 @@ export function InstructorDashboard({ setView, notify }) {
                     <Icon name="folder" size={14} />
                   </div>
                   <div className="job-row-body">
-                    <div className="job-title">{s.title || s.name}</div>
+                    <div className="job-title">
+                      {s.title || "Untitled Service"}
+                    </div>
                   </div>
                   <div className="service-meta">
                     <span className="service-price">${s.price || 0}</span>
@@ -950,10 +1040,7 @@ export function InstructorDashboard({ setView, notify }) {
                 <div className="empty-row">Marketplace offers are empty.</div>
               )}
             </div>
-            <button
-              className="btn-browse"
-              onClick={() => setView && setView("marketplace")}
-            >
+            <button className="btn-browse" onClick={() => navigate("/shop")}>
               Manage Services <Icon name="arrow" size={13} />
             </button>
           </div>
@@ -966,7 +1053,7 @@ export function InstructorDashboard({ setView, notify }) {
               <h3>Support Tickets</h3>
               <button
                 className="view-all-link"
-                onClick={() => setView && setView("support-instructor")}
+                onClick={() => navigate("/support-instructor")}
               >
                 View All
               </button>
@@ -976,7 +1063,7 @@ export function InstructorDashboard({ setView, notify }) {
                 <div className="ticket-stat-icon">
                   <Icon name="ticket" size={16} />
                 </div>
-                <div className="ticket-stat-value">{tickets?.open || 0}</div>
+                <div className="ticket-stat-value">{openTickets || 0}</div>
                 <div className="ticket-stat-label">Open Tickets</div>
                 <div className="ticket-stat-sub">Need attention</div>
               </div>
@@ -984,9 +1071,7 @@ export function InstructorDashboard({ setView, notify }) {
                 <div className="ticket-stat-icon">
                   <Icon name="bell" size={16} />
                 </div>
-                <div className="ticket-stat-value">
-                  {tickets?.awaiting || 0}
-                </div>
+                <div className="ticket-stat-value">{awaitingTickets || 0}</div>
                 <div className="ticket-stat-label">Awaiting Response</div>
                 <div className="ticket-stat-sub">From support team</div>
               </div>
@@ -994,16 +1079,14 @@ export function InstructorDashboard({ setView, notify }) {
                 <div className="ticket-stat-icon">
                   <Icon name="folder" size={16} />
                 </div>
-                <div className="ticket-stat-value">
-                  {tickets?.resolved || 0}
-                </div>
+                <div className="ticket-stat-value">{resolvedTickets || 0}</div>
                 <div className="ticket-stat-label">Resolved</div>
                 <div className="ticket-stat-sub">All good!</div>
               </div>
             </div>
             <button
               className="btn-browse"
-              onClick={() => setView && setView("support-instructor")}
+              onClick={() => navigate("/support-instructor")}
             >
               Go to Support <Icon name="arrow" size={13} />
             </button>
@@ -1014,31 +1097,57 @@ export function InstructorDashboard({ setView, notify }) {
               <h3>Notifications</h3>
               <button
                 className="view-all-link"
-                onClick={() => setView && setView("messages")}
+                onClick={() => navigate("/notifications")}
               >
                 View All
               </button>
             </div>
             <div className="notif-grid-2col">
-              {notifications.slice(0, 4).map((n) => (
-                <div className="notif-row" key={n.id || n._id}>
-                  <div className="notif-icon">
-                    <Icon name={n.icon || "bell"} size={14} />
+              {notifications.slice(0, 5).map((n) => {
+                const isSupportNotification =
+                  n.type === "support" ||
+                  n.relatedEntityType === "SupportTicket";
+                const supportRoute =
+                  isSupportNotification && n.relatedEntity
+                    ? `/support/${n.relatedEntity}`
+                    : null;
+
+                return (
+                  <div className="notif-row" key={n.id || n._id}>
+                    <div className="notif-icon">
+                      <Icon name={n.icon || "bell"} size={14} />
+                    </div>
+                    <div className="notif-row-body">
+                      <div className="notif-title">{n.title}</div>
+                      <div className="notif-sub">{n.message}</div>
+                      {supportRoute && (
+                        <div className="notif-action-row">
+                          <button
+                            type="button"
+                            className="notif-action-btn"
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              navigate(supportRoute);
+                            }}
+                          >
+                            Open Ticket
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                    <div className="notif-time">
+                      {new Date(n.createdAt).toLocaleDateString()}
+                    </div>
                   </div>
-                  <div className="notif-row-body">
-                    <div className="notif-title">{n.title}</div>
-                    <div className="notif-sub">{n.sub || n.message}</div>
-                  </div>
-                  <div className="notif-time">{n.time || "Just Now"}</div>
-                </div>
-              ))}
+                );
+              })}
               {notifications.length === 0 && (
                 <div className="empty-row">No new unread system events.</div>
               )}
             </div>
             <button
               className="btn-browse"
-              onClick={() => setView && setView("messages")}
+              onClick={() => navigate("/notifications")}
             >
               View All Notifications <Icon name="arrow" size={13} />
             </button>

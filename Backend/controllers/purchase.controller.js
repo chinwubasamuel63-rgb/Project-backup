@@ -195,7 +195,7 @@ export const verifyPurchase = async (req, res) => {
         relatedEntityType: "Product",
       });
     } catch (error) {
-      console.error(error.message);
+      ;
     }
 
     try {
@@ -208,7 +208,7 @@ export const verifyPurchase = async (req, res) => {
         relatedEntityType: "Product",
       });
     } catch (error) {
-      console.error(error.message);
+      ;
     }
 
     try {
@@ -223,10 +223,7 @@ export const verifyPurchase = async (req, res) => {
         });
       }
     } catch (error) {
-      console.error(
-        "Product sold email failed:",
-        error.message,
-      );
+      ;
     }
 
     try {
@@ -240,10 +237,7 @@ export const verifyPurchase = async (req, res) => {
         });
       }
     } catch (error) {
-      console.error(
-        "Purchase successful email failed:",
-        error.message,
-      );
+      ;
     }
 
     res.status(200).json({

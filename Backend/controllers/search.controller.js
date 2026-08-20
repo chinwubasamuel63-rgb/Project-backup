@@ -19,15 +19,23 @@ export const globalSearch = async (req, res) => {
 
     const [users, projects, jobs, products, streams] = await Promise.all([
       User.find({
-        $or: [{ username: searchRegex }, { email: searchRegex }],
+        $or: [
+          { username: searchRegex },
+          { displayName: searchRegex },
+          { email: searchRegex },
+        ],
       })
-        .select("username profilePicture role")
+        .select("username displayName avatar role primaryTrack")
         .limit(10),
 
       Project.find({
-        $or: [{ name: searchRegex }, { tagline: searchRegex }, { description: searchRegex }],
+        $or: [
+          { name: searchRegex },
+          { tagline: searchRegex },
+          { description: searchRegex },
+        ],
       })
-        .populate("owner", "username profilePicture")
+        .populate("owner", "username displayName avatar")
         .limit(10),
 
       Job.find({
@@ -37,7 +45,7 @@ export const globalSearch = async (req, res) => {
           { roleType: searchRegex },
         ],
       })
-        .populate("owner", "username profilePicture")
+        .populate("owner", "username displayName avatar")
         .limit(10),
 
       Product.find({
@@ -47,19 +55,18 @@ export const globalSearch = async (req, res) => {
           { category: searchRegex },
         ],
       })
-        .populate("seller", "username profilePicture")
+        .populate("seller", "username displayName avatar")
         .limit(10),
 
       Stream.find({
         title: searchRegex,
       })
-        .populate("host", "username profilePicture")
+        .populate("host", "username displayName avatar")
         .limit(10),
     ]);
 
     res.status(200).json({
       success: true,
-
       results: {
         users,
         projects,

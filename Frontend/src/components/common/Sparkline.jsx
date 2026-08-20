@@ -1,5 +1,3 @@
-import React from "react";
-
 export function Sparkline({ data, color }) {
   const w = 90,
     h = 26;

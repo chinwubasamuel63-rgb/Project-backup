@@ -1,8 +1,9 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 
 import { createJob } from "../../services/jobService";
 import { getMyProjects } from "../../services/projectService";
+import AlertModal from "../../components/ui/AlertModal";
 
 import "./jobs.css";
 
@@ -18,6 +19,7 @@ const CreateJob = () => {
   const [skillInput, setSkillInput] = useState("");
 
   const [saving, setSaving] = useState(false);
+  const [alertMessage, setAlertMessage] = useState("");
 
   const [formData, setFormData] = useState({
     title: "",
@@ -30,11 +32,7 @@ const CreateJob = () => {
     projectId: projectIdFromUrl || "",
   });
 
-  useEffect(() => {
-    loadProjects();
-  }, []);
-
-  const loadProjects = async () => {
+  const loadProjects = useCallback(async () => {
     try {
       setLoadingProjects(true);
 
@@ -46,7 +44,15 @@ const CreateJob = () => {
     } finally {
       setLoadingProjects(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    const timerId = window.setTimeout(() => {
+      void loadProjects();
+    }, 0);
+
+    return () => window.clearTimeout(timerId);
+  }, [loadProjects]);
 
   const handleChange = (e) => {
     const { name, value, checked, type } = e.target;
@@ -97,7 +103,7 @@ const CreateJob = () => {
       }
     } catch (error) {
       console.error(error);
-      alert(error.response?.data?.message || "Failed to create job");
+      setAlertMessage(error.response?.data?.message || "Failed to create job");
     } finally {
       setSaving(false);
     }
@@ -105,6 +111,7 @@ const CreateJob = () => {
 
   return (
     <div className="page-wrap">
+      <AlertModal message={alertMessage} onClose={() => setAlertMessage("")} />
       <form className="glass-card create-job-form" onSubmit={handleSubmit}>
         <div className="page-header">
           <div>

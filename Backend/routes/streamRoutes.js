@@ -1,11 +1,13 @@
 import express from "express";
 import { protect } from "../middleware/authMiddleware.js";
 import { generateStreamToken } from "../controllers/livekitController.js";
-import upload from "../middleware/upload.middleware.js";
+import upload, { handleMulterError } from "../middleware/upload.middleware.js";
 import {
   createStream,
   getStreams,
+  getMyStreams,
   getStreamById,
+  startStream,
   endStream,
   joinStream,
   leaveStream,
@@ -28,7 +30,9 @@ import {
 const router = express.Router();
 
 router.get("/", protect, getStreams);
+router.get("/my", protect, getMyStreams);
 router.post("/", protect, createStream);
+router.post("/:streamId/start", protect, startStream);
 router.post("/:streamId/join", protect, joinStream);
 router.post("/:streamId/leave", protect, leaveStream);
 router.get("/:streamId/participants", protect, getParticipants);
@@ -64,6 +68,7 @@ router.patch(
   "/:streamId/thumbnail",
   protect,
   upload.single("thumbnail"),
+  handleMulterError,
   uploadStreamThumbnail,
 );
 router.delete("/:streamId/thumbnail", protect, deleteStreamThumbnail);

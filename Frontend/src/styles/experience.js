@@ -6,7 +6,6 @@
 import { COLORS } from "../data/colors";
 
 export const experienceStyles = `
-  .dashboard-stage { padding: 24px; }
   .hero-3d { min-height: 310px; display: grid; grid-template-columns: minmax(320px, 1fr) minmax(300px, 460px); gap: 24px; align-items: center; padding: 30px; border: 1px solid rgba(148,163,184,.16); border-radius: 12px; background: linear-gradient(135deg, rgba(15,23,42,.9), rgba(8,16,31,.74)); position: relative; overflow: hidden; margin-bottom: 22px; }
   .hero-3d:after, .conversation-card:after { content: ""; position: absolute; inset: 0; background: linear-gradient(90deg, transparent, rgba(255,255,255,.08), transparent); transform: translateX(-120%); animation: shimmer 7s linear infinite; pointer-events: none; }
   .hero-copy { position: relative; z-index: 2; max-width: 650px; }
@@ -61,7 +60,9 @@ export const experienceStyles = `
   .mini-list { display: grid; gap: 6px; margin: 14px 0; } .mini-list small { color: ${COLORS.green}; background: rgba(34,197,94,.08); border: 1px solid rgba(34,197,94,.14); border-radius: 6px; padding: 7px; }
   .chip-row { display: flex; flex-wrap: wrap; gap: 6px; } .chip-row b { color: ${COLORS.text}; border: 1px solid rgba(148,163,184,.18); border-radius: 999px; padding: 4px 8px; font-size: 11px; }
   .tile-foot { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 16px; } .tile-foot em { color: ${COLORS.muted}; font-style: normal; font-size: 12px; }
-  .dev-toast { position: fixed; right: 24px; bottom: 24px; z-index: 2000; display: flex; align-items: center; gap: 10px; max-width: 360px; padding: 14px 16px; border-radius: 10px; color: #fff; background: rgba(7,16,29,.94); border: 1px solid rgba(34,197,94,.3); box-shadow: 0 22px 70px rgba(0,0,0,.36); } .dev-toast span { display: grid; place-items: center; width: 28px; height: 28px; border-radius: 50%; background: rgba(34,197,94,.18); color: ${COLORS.green}; font-size: 10px; font-weight: 900; }
+  .dev-toast { position: fixed; right: 24px; bottom: 24px; z-index: 2000; display: flex; align-items: center; gap: 10px; width: min(360px, calc(100vw - 28px)); padding: 12px 14px; border-radius: 12px; color: #e2e8f0; background: rgba(15,23,42,.88); border: 1px solid rgba(148,163,184,.18); box-shadow: 0 18px 40px rgba(2,6,23,.42); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); }
+  .dev-toast-indicator { width: 8px; height: 8px; border-radius: 50%; background: linear-gradient(135deg, ${COLORS.green}, #8b5cf6); box-shadow: 0 0 0 4px rgba(52,211,153,.12); flex-shrink: 0; }
+  .dev-toast-message { font-size: 13px; line-height: 1.5; color: #e2e8f0; word-break: break-word; }
   .main-surface .card { background: rgba(15,23,42,.72); border-color: rgba(148,163,184,.16); box-shadow: 0 18px 52px rgba(0,0,0,.2); }
   .main-surface button { transition: transform .18s, border-color .18s, background .18s; } .main-surface button:hover, .top-nav button:hover { transform: translateY(-1px); }
   @media (max-width: 980px) { .hero-3d, .chat-shell { grid-template-columns: 1fr; } .chat-rail { min-height: 300px; } .role-grid { grid-template-columns: 1fr; } .page-head { align-items: flex-start; flex-direction: column; } .head-stat { width: 100%; height: 100px; } }
