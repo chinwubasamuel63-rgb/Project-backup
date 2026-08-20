@@ -1,11 +1,11 @@
 import axios from "axios";
 
-const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL,
+const API = axios.create({
+  baseURL: "/api",
   withCredentials: true,
 });
 
-api.interceptors.response.use(
+API.interceptors.response.use(
   (response) => response,
 
   async (error) => {
@@ -13,16 +13,24 @@ api.interceptors.response.use(
 
     if (
       error.response?.status === 401 &&
+      originalRequest &&
       !originalRequest._retry &&
-      !originalRequest.url.includes("/auth/refresh")
+      !originalRequest.url?.includes("/auth/refresh") &&
+      !originalRequest.url?.includes("/auth/login") &&
+      !originalRequest.url?.includes("/auth/register")
     ) {
       originalRequest._retry = true;
 
       try {
-        await api.post("/auth/refresh");
+        await API.post("/auth/refresh");
 
-        return api(originalRequest);
+        return API(originalRequest);
       } catch (refreshError) {
+        localStorage.removeItem("user");
+        localStorage.removeItem("accessToken");
+
+        window.location.href = "/login";
+
         return Promise.reject(refreshError);
       }
     }
@@ -31,4 +39,4 @@ api.interceptors.response.use(
   },
 );
 
-export default api;
+export default API;

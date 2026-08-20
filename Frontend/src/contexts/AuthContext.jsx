@@ -3,29 +3,36 @@ import { io } from "socket.io-client";
 import * as authService from "../services/authService";
 import { AuthContext } from "./AuthContext.js";
 
-// Socket.IO connects directly to the Render backend.
-// REST API requests use the Vercel /api proxy.
+// ============================================================
+// SOCKET.IO
+// ============================================================
+// REST API uses Vercel /api proxy.
+// Socket.IO connects directly to Render.
 const SOCKET_URL =
-  import.meta.env.VITE_SOCKET_URL ||
-  "https://devstream-nexus.onrender.com";
+  import.meta.env.VITE_SOCKET_URL || "https://devstream-nexus.onrender.com";
 
 export default function AuthProvider({ children }) {
   const [socket, setSocket] = useState(null);
 
+  // ==========================================================
+  // USER NORMALIZATION
+  // ==========================================================
   const normalizeUser = (user) => {
     if (!user) return null;
 
     return {
       ...user,
+
       _id: user._id || user.id,
       id: user.id || user._id,
-      role:
-        typeof user.role === "string"
-          ? user.role.toLowerCase()
-          : user.role,
+
+      role: typeof user.role === "string" ? user.role.toLowerCase() : user.role,
     };
   };
 
+  // ==========================================================
+  // INITIAL USER
+  // ==========================================================
   const [user, setUser] = useState(() => {
     try {
       const savedUser = localStorage.getItem("user");
@@ -35,7 +42,7 @@ export default function AuthProvider({ children }) {
       }
 
       return normalizeUser(JSON.parse(savedUser));
-    } catch {
+    } catch (error) {
       localStorage.removeItem("user");
       return null;
     }
@@ -43,60 +50,108 @@ export default function AuthProvider({ children }) {
 
   const [loading, setLoading] = useState(true);
 
-  const setAuthData = (userData) => {
+  // ==========================================================
+  // AUTH DATA
+  // ==========================================================
+  const setAuthData = (userData, accessToken = null) => {
     const normalizedUser = normalizeUser(userData);
 
-    localStorage.setItem("user", JSON.stringify(normalizedUser));
+    if (normalizedUser) {
+      localStorage.setItem("user", JSON.stringify(normalizedUser));
+    }
+
+    // IMPORTANT:
+    // Socket.IO needs the access token because it connects
+    // directly to Render rather than through Vercel.
+    if (accessToken) {
+      localStorage.setItem("accessToken", accessToken);
+    }
+
     setUser(normalizedUser);
   };
 
   const clearAuthData = () => {
     localStorage.removeItem("user");
+    localStorage.removeItem("accessToken");
+
     setUser(null);
   };
 
-  // ---------------------------------------------------------
-  // SOCKET.IO
-  // ---------------------------------------------------------
-
+  // ==========================================================
+  // SOCKET.IO CONNECTION
+  // ==========================================================
   useEffect(() => {
-    if (!user?._id) return;
+    if (!user?._id) {
+      setSocket(null);
+      return;
+    }
+
+    const accessToken = localStorage.getItem("accessToken");
+
+    if (!accessToken) {
+      console.warn("Socket not connected: access token is missing.");
+
+      setSocket(null);
+      return;
+    }
+
+    console.log("Connecting Socket.IO...");
 
     const newSocket = io(SOCKET_URL, {
       withCredentials: true,
 
-      // Start with polling and allow Socket.IO to upgrade
-      // to WebSocket after the connection is established.
+      // IMPORTANT:
+      // Send JWT through Socket.IO handshake.
+      auth: {
+        token: accessToken,
+      },
+
       transports: ["polling", "websocket"],
+      autoConnect: true,
     });
 
-    const socketTimer = window.setTimeout(() => {
-      setSocket(newSocket);
-    }, 0);
+    setSocket(newSocket);
 
-    newSocket.on("connect", () => {
+    // --------------------------------------------------------
+    // CONNECT
+    // --------------------------------------------------------
+    const handleConnect = () => {
       console.log("Socket connected:", newSocket.id);
 
+      // Join the authenticated user's room.
       newSocket.emit("join", user._id);
-    });
+    };
 
-    newSocket.on("connect_error", (error) => {
-      console.error("Socket connection error:", error.message);
-    });
+    // --------------------------------------------------------
+    // CONNECTION ERROR
+    // --------------------------------------------------------
+    const handleConnectError = (error) => {
+      console.error("Socket connection error:", error?.message || error);
+    };
 
-    newSocket.on("disconnect", (reason) => {
+    // --------------------------------------------------------
+    // DISCONNECT
+    // --------------------------------------------------------
+    const handleDisconnect = (reason) => {
       console.log("Socket disconnected:", reason);
-    });
+    };
 
-    // -------------------------------------------------------
+    newSocket.on("connect", handleConnect);
+
+    newSocket.on("connect_error", handleConnectError);
+
+    newSocket.on("disconnect", handleDisconnect);
+
+    // ========================================================
     // NOTIFICATIONS
-    // -------------------------------------------------------
+    // ========================================================
 
     const handleNotification = (payload) => {
       window.dispatchEvent(
         new CustomEvent("devstream:notification-received", {
           detail: {
             notification: payload?.notification || null,
+
             unreadCount: payload?.unreadCount ?? 0,
           },
         }),
@@ -106,6 +161,7 @@ export default function AuthProvider({ children }) {
         new CustomEvent("devstream:notifications-updated", {
           detail: {
             notification: payload?.notification || null,
+
             unreadCount: payload?.unreadCount ?? 0,
           },
         }),
@@ -137,79 +193,94 @@ export default function AuthProvider({ children }) {
     };
 
     newSocket.on("notification", handleNotification);
+
     newSocket.on("notificationRead", handleNotificationRead);
-    newSocket.on(
-      "allNotificationsRead",
-      handleAllNotificationsRead,
-    );
-    newSocket.on(
-      "notificationDeleted",
-      handleNotificationDeleted,
-    );
 
+    newSocket.on("allNotificationsRead", handleAllNotificationsRead);
+
+    newSocket.on("notificationDeleted", handleNotificationDeleted);
+
+    // ========================================================
+    // CLEANUP
+    // ========================================================
     return () => {
+      console.log("Cleaning up Socket.IO connection.");
+
+      newSocket.off("connect", handleConnect);
+
+      newSocket.off("connect_error", handleConnectError);
+
+      newSocket.off("disconnect", handleDisconnect);
+
       newSocket.off("notification", handleNotification);
-      newSocket.off(
-        "notificationRead",
-        handleNotificationRead,
-      );
-      newSocket.off(
-        "allNotificationsRead",
-        handleAllNotificationsRead,
-      );
-      newSocket.off(
-        "notificationDeleted",
-        handleNotificationDeleted,
-      );
 
-      newSocket.off("connect");
-      newSocket.off("connect_error");
-      newSocket.off("disconnect");
+      newSocket.off("notificationRead", handleNotificationRead);
 
-      window.clearTimeout(socketTimer);
+      newSocket.off("allNotificationsRead", handleAllNotificationsRead);
+
+      newSocket.off("notificationDeleted", handleNotificationDeleted);
 
       newSocket.disconnect();
+
+      setSocket(null);
     };
   }, [user]);
 
-  // ---------------------------------------------------------
+  // ==========================================================
   // RESTORE AUTHENTICATION
-  // ---------------------------------------------------------
-
+  // ==========================================================
   useEffect(() => {
+    let mounted = true;
+
     const loadUser = async () => {
       try {
-        // Refresh token is stored in an httpOnly cookie.
-        // The browser automatically sends it because the
-        // axios service uses withCredentials: true.
+        /*
+         * The refreshToken is an HttpOnly cookie.
+         *
+         * REST request:
+         *
+         * Browser
+         *    ↓
+         * Vercel /api
+         *    ↓
+         * Render backend
+         *
+         * Axios has withCredentials:true.
+         */
         await authService.refreshToken();
 
         const userRes = await authService.getCurrentUser();
 
         const userData = normalizeUser(userRes.data.user);
 
+        if (!mounted) return;
+
         setUser(userData);
 
-        localStorage.setItem(
-          "user",
-          JSON.stringify(userData),
-        );
+        localStorage.setItem("user", JSON.stringify(userData));
       } catch (error) {
         console.error("Failed to restore authentication:", error);
 
+        if (!mounted) return;
+
         clearAuthData();
       } finally {
-        setLoading(false);
+        if (mounted) {
+          setLoading(false);
+        }
       }
     };
 
     loadUser();
+
+    return () => {
+      mounted = false;
+    };
   }, []);
 
-  // ---------------------------------------------------------
+  // ==========================================================
   // LOGIN
-  // ---------------------------------------------------------
-
+  // ==========================================================
   const login = async (email, password) => {
     const res = await authService.loginUser({
       email,
@@ -218,20 +289,29 @@ export default function AuthProvider({ children }) {
 
     const userData = normalizeUser(res.data.user);
 
-    setAuthData(userData);
+    /*
+     * IMPORTANT:
+     *
+     * Backend must return:
+     *
+     * {
+     *   success: true,
+     *   accessToken: "...",
+     *   user: {...}
+     * }
+     */
+
+    const accessToken = res.data.accessToken;
+
+    setAuthData(userData, accessToken);
 
     return userData;
   };
 
-  // ---------------------------------------------------------
+  // ==========================================================
   // REGISTER
-  // ---------------------------------------------------------
-
-  const register = async ({
-    username,
-    email,
-    password,
-  }) => {
+  // ==========================================================
+  const register = async ({ username, email, password }) => {
     const res = await authService.register({
       username,
       email,
@@ -240,15 +320,16 @@ export default function AuthProvider({ children }) {
 
     const userData = normalizeUser(res.data.user);
 
-    setAuthData(userData);
+    const accessToken = res.data.accessToken;
+
+    setAuthData(userData, accessToken);
 
     return userData;
   };
 
-  // ---------------------------------------------------------
+  // ==========================================================
   // LOGOUT
-  // ---------------------------------------------------------
-
+  // ==========================================================
   const logout = async () => {
     try {
       if (socket) {
@@ -258,20 +339,26 @@ export default function AuthProvider({ children }) {
       await authService.logout();
     } catch (error) {
       console.error("Logout error:", error);
+    } finally {
+      clearAuthData();
+      setSocket(null);
     }
-
-    clearAuthData();
   };
 
+  // ==========================================================
+  // CONTEXT
+  // ==========================================================
   return (
     <AuthContext.Provider
       value={{
         user,
         loading,
         socket,
+
         login,
         register,
         logout,
+
         setAuthData,
         clearAuthData,
       }}

@@ -98,6 +98,9 @@ export const registerUser = async (req, res) => {
     res.status(201).json({
       success: true,
       message: "User registered successfully",
+
+      accessToken,
+      
       user: {
         id: user._id,
         username: user.username,
@@ -194,6 +197,9 @@ export const loginUser = async (req, res) => {
       message: user.isSuspended
         ? "Login successful (account is currently suspended)"
         : "Login successful",
+
+      accessToken,
+
       user: {
         id: user._id,
         username: user.username,
@@ -244,7 +250,7 @@ export const forgotPassword = async (req, res) => {
           "If an account exists with that email, a password reset email has been sent",
       });
     }
-    
+
     if (user.authProvider !== "local") {
       return res.status(400).json({
         success: false,
@@ -421,6 +427,21 @@ export const logoutUser = async (req, res) => {
     res.status(200).json({
       success: true,
       message: "Logged out successfully",
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+export const getSocketToken = async (req, res) => {
+  try {
+    const token = generateAccessToken(req.user._id);
+
+    res.status(200).json({
+      success: true,
+      token,
     });
   } catch (error) {
     res.status(500).json({

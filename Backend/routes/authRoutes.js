@@ -12,6 +12,7 @@ import {
   resetPassword,
   refreshAccessToken,
   logoutUser,
+  getSocketToken,
 } from "../controllers/authController.js";
 
 const router = express.Router();
@@ -79,6 +80,7 @@ router.get(
 router.post("/refresh", refreshAccessToken);
 router.post("/logout", logoutUser);
 router.get("/me", protect, getCurrentUser);
+router.get("/socket-token", protect, getSocketToken);
 router.post("/forgot-password", forgotPassword);
 router.post("/reset-password/:token", resetPassword);
 
