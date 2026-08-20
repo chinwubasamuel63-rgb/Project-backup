@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
+import { Mail } from "lucide-react";
 import { useAuth } from "../../hooks/useAuth";
 import "./project-details.css";
 import {
@@ -933,13 +934,15 @@ const ProjectDetails = () => {
                   </div>
                   {!isOwner && (
                     <button
+                      type="button"
                       className="pd-btn-icon-sm"
                       onClick={() =>
                         navigate(`/messages?user=${project.owner?._id}`)
                       }
                       title="Message owner"
+                      aria-label={`Message ${project.owner?.username || "owner"}`}
                     >
-                      ✉
+                      <Mail size={15} strokeWidth={1.8} aria-hidden="true" />
                     </button>
                   )}
                 </div>
@@ -970,13 +973,19 @@ const ProjectDetails = () => {
                       </div>
                       {user?._id !== member._id && (
                         <button
+                          type="button"
                           className="pd-btn-icon-sm"
                           onClick={() =>
                             navigate(`/messages?user=${member._id}`)
                           }
                           title="Message co-owner"
+                          aria-label={`Message ${member.username || "co-owner"}`}
                         >
-                          ✉
+                          <Mail
+                            size={15}
+                            strokeWidth={1.8}
+                            aria-hidden="true"
+                          />
                         </button>
                       )}
                     </div>

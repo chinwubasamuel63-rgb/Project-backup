@@ -42,9 +42,7 @@ export const getProfileActivity = async (req, res) => {
 
       Stream.find({
         host: userId,
-        ...(req.params.userId
-          ? { visibility: "public", status: "started" }
-          : {}),
+        ...(req.params.userId ? { visibility: "public" } : {}),
       })
         .select("title createdAt startedAt")
         .sort({ createdAt: -1 })

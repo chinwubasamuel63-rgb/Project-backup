@@ -687,7 +687,7 @@ export default function LiveRoom() {
     const handleChatMessage = (payload) => {
       if (!payload || payload.streamId !== streamId) return;
       setChatMessages((current) => [
-        ...current,
+        ...current.filter((message) => message.id !== payload.id),
         {
           id: payload.id,
           text: payload.text,
@@ -886,17 +886,22 @@ export default function LiveRoom() {
         const isVideo = track.kind === Track.Kind.Video;
         const isAudio = track.kind === Track.Kind.Audio;
 
-        setRemoteParticipants((current) =>
-          current.map((entry) => {
-            if (entry.identity !== participant.identity) return entry;
-            return {
-              ...entry,
-              participant,
-              videoTrack: isVideo ? track : entry.videoTrack,
-              audioTrack: isAudio ? track : entry.audioTrack,
-            };
-          }),
-        );
+        setRemoteParticipants((current) => {
+          const existing = current.find(
+            (entry) => entry.identity === participant.identity,
+          );
+          const nextEntry = {
+            identity: participant.identity,
+            participant,
+            videoTrack: isVideo ? track : existing?.videoTrack || null,
+            audioTrack: isAudio ? track : existing?.audioTrack || null,
+          };
+
+          if (!existing) return [...current, nextEntry];
+          return current.map((entry) =>
+            entry.identity === participant.identity ? nextEntry : entry,
+          );
+        });
       };
 
       const handleTrackUnsubscribed = (track, publication, participant) => {
@@ -941,6 +946,30 @@ export default function LiveRoom() {
       await room.connect(serverUrl, token);
       await room.startAudio();
 
+      setRemoteParticipants(
+        Array.from(room.remoteParticipants.values()).map((participant) => {
+          let videoTrack = null;
+          let audioTrack = null;
+
+          participant.trackPublications.forEach((publication) => {
+            if (!publication.isSubscribed || !publication.track) return;
+            if (publication.kind === Track.Kind.Video) {
+              videoTrack = publication.track;
+            }
+            if (publication.kind === Track.Kind.Audio) {
+              audioTrack = publication.track;
+            }
+          });
+
+          return {
+            identity: participant.identity,
+            participant,
+            videoTrack,
+            audioTrack,
+          };
+        }),
+      );
+
       const effectiveMicPermission =
         participantRecord?.microphoneEnabled ?? isCurrentUserHost ?? true;
       const effectiveCameraPermission =
@@ -961,15 +990,6 @@ export default function LiveRoom() {
         await room.localParticipant.setCameraEnabled(false);
         setIsCameraEnabled(false);
       }
-
-      setRemoteParticipants(
-        Array.from(room.remoteParticipants.values()).map((participant) => ({
-          identity: participant.identity,
-          participant,
-          videoTrack: null,
-          audioTrack: null,
-        })),
-      );
     } catch (error) {
       const message =
         error?.response?.data?.message ||
@@ -1479,21 +1499,12 @@ export default function LiveRoom() {
 
     const text = message.trim();
     const currentUserId = getCurrentUserId(user);
-    const localMessage = {
-      id: `${currentUserId}-${Date.now()}`,
-      text,
-      user: user?.username || "Guest",
-      userId: currentUserId,
-      type: "user",
-    };
 
-    setChatMessages((current) => [...current, localMessage]);
     socket.emit("stream:chat-send", {
       streamId,
       text,
       userId: currentUserId,
       username: user?.username || "Guest",
-      id: localMessage.id,
     });
 
     setMessage("");
@@ -1503,8 +1514,7 @@ export default function LiveRoom() {
     <div className="live-room-empty-state">{text}</div>
   );
 
-  const viewerCount =
-    stream.totalViewers ?? stream.viewersCount ?? participants.length;
+  const viewerCount = participants.length;
 
   const primaryRemote =
     remoteParticipants.find((p) => p.videoTrack) || remoteParticipants[0];
@@ -1646,7 +1656,7 @@ export default function LiveRoom() {
                 muted
                 className="ytstage-video"
               />
-            ) : primaryRemote?.videoTrack ? (
+            ) : primaryRemote?.videoTrack || primaryRemote?.audioTrack ? (
               <ParticipantTile
                 participant={primaryRemote.participant}
                 videoTrack={primaryRemote.videoTrack}

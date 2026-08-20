@@ -442,7 +442,6 @@ export const getUserStreams = async (req, res) => {
     const streams = await Stream.find({
       host: req.params.userId,
       visibility: "public",
-      status: "started",
     })
       .populate("project", "name")
       .sort({ createdAt: -1 });
