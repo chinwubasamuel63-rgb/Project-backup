@@ -3,7 +3,8 @@ import { io } from "socket.io-client";
 import * as authService from "../services/authService";
 import { AuthContext } from "./AuthContext.js";
 
-// Socket.IO connects to the server origin, while REST calls use the /api path.
+// Socket.IO connects directly to the Render backend.
+// REST API requests use the Vercel /api proxy.
 const SOCKET_URL =
   import.meta.env.VITE_SOCKET_URL ||
   "https://devstream-nexus.onrender.com";
@@ -18,7 +19,10 @@ export default function AuthProvider({ children }) {
       ...user,
       _id: user._id || user.id,
       id: user.id || user._id,
-      role: typeof user.role === "string" ? user.role.toLowerCase() : user.role,
+      role:
+        typeof user.role === "string"
+          ? user.role.toLowerCase()
+          : user.role,
     };
   };
 
@@ -51,27 +55,42 @@ export default function AuthProvider({ children }) {
     setUser(null);
   };
 
-  // Manage Socket Connection & Joining Room based on User state
-  useEffect(() => {
-    if (!user || !user._id) return;
+  // ---------------------------------------------------------
+  // SOCKET.IO
+  // ---------------------------------------------------------
 
-    // Get JWT token from localStorage
-    const token =
-      localStorage.getItem("accessToken") || localStorage.getItem("token");
+  useEffect(() => {
+    if (!user?._id) return;
 
     const newSocket = io(SOCKET_URL, {
       withCredentials: true,
-      auth: {
-        token: token, // Send JWT token in auth
-      },
+
+      // Start with polling and allow Socket.IO to upgrade
+      // to WebSocket after the connection is established.
+      transports: ["polling", "websocket"],
     });
 
-    const socketTimer = window.setTimeout(() => setSocket(newSocket), 0);
+    const socketTimer = window.setTimeout(() => {
+      setSocket(newSocket);
+    }, 0);
 
     newSocket.on("connect", () => {
-      // Emit join event with the user's MongoDB ID
+      console.log("Socket connected:", newSocket.id);
+
       newSocket.emit("join", user._id);
     });
+
+    newSocket.on("connect_error", (error) => {
+      console.error("Socket connection error:", error.message);
+    });
+
+    newSocket.on("disconnect", (reason) => {
+      console.log("Socket disconnected:", reason);
+    });
+
+    // -------------------------------------------------------
+    // NOTIFICATIONS
+    // -------------------------------------------------------
 
     const handleNotification = (payload) => {
       window.dispatchEvent(
@@ -82,6 +101,7 @@ export default function AuthProvider({ children }) {
           },
         }),
       );
+
       window.dispatchEvent(
         new CustomEvent("devstream:notifications-updated", {
           detail: {
@@ -92,13 +112,14 @@ export default function AuthProvider({ children }) {
       );
     };
 
-    newSocket.on("notification", handleNotification);
-
     const handleNotificationRead = (payload) => {
       window.dispatchEvent(
-        new CustomEvent("devstream:notification-read", { detail: payload }),
+        new CustomEvent("devstream:notification-read", {
+          detail: payload,
+        }),
       );
     };
+
     const handleAllNotificationsRead = (payload) => {
       window.dispatchEvent(
         new CustomEvent("devstream:notifications-read-all", {
@@ -106,41 +127,76 @@ export default function AuthProvider({ children }) {
         }),
       );
     };
+
     const handleNotificationDeleted = (payload) => {
       window.dispatchEvent(
-        new CustomEvent("devstream:notification-deleted", { detail: payload }),
+        new CustomEvent("devstream:notification-deleted", {
+          detail: payload,
+        }),
       );
     };
 
+    newSocket.on("notification", handleNotification);
     newSocket.on("notificationRead", handleNotificationRead);
-    newSocket.on("allNotificationsRead", handleAllNotificationsRead);
-    newSocket.on("notificationDeleted", handleNotificationDeleted);
-
-    newSocket.on("error", (error) => {
-      console.error("Socket error:", error);
-    });
+    newSocket.on(
+      "allNotificationsRead",
+      handleAllNotificationsRead,
+    );
+    newSocket.on(
+      "notificationDeleted",
+      handleNotificationDeleted,
+    );
 
     return () => {
       newSocket.off("notification", handleNotification);
-      newSocket.off("notificationRead", handleNotificationRead);
-      newSocket.off("allNotificationsRead", handleAllNotificationsRead);
-      newSocket.off("notificationDeleted", handleNotificationDeleted);
+      newSocket.off(
+        "notificationRead",
+        handleNotificationRead,
+      );
+      newSocket.off(
+        "allNotificationsRead",
+        handleAllNotificationsRead,
+      );
+      newSocket.off(
+        "notificationDeleted",
+        handleNotificationDeleted,
+      );
+
+      newSocket.off("connect");
+      newSocket.off("connect_error");
+      newSocket.off("disconnect");
+
       window.clearTimeout(socketTimer);
+
       newSocket.disconnect();
     };
   }, [user]);
 
+  // ---------------------------------------------------------
+  // RESTORE AUTHENTICATION
+  // ---------------------------------------------------------
+
   useEffect(() => {
     const loadUser = async () => {
       try {
+        // Refresh token is stored in an httpOnly cookie.
+        // The browser automatically sends it because the
+        // axios service uses withCredentials: true.
         await authService.refreshToken();
 
         const userRes = await authService.getCurrentUser();
+
         const userData = normalizeUser(userRes.data.user);
 
         setUser(userData);
-        localStorage.setItem("user", JSON.stringify(userData));
-      } catch {
+
+        localStorage.setItem(
+          "user",
+          JSON.stringify(userData),
+        );
+      } catch (error) {
+        console.error("Failed to restore authentication:", error);
+
         clearAuthData();
       } finally {
         setLoading(false);
@@ -149,6 +205,10 @@ export default function AuthProvider({ children }) {
 
     loadUser();
   }, []);
+
+  // ---------------------------------------------------------
+  // LOGIN
+  // ---------------------------------------------------------
 
   const login = async (email, password) => {
     const res = await authService.loginUser({
@@ -163,7 +223,15 @@ export default function AuthProvider({ children }) {
     return userData;
   };
 
-  const register = async ({ username, email, password }) => {
+  // ---------------------------------------------------------
+  // REGISTER
+  // ---------------------------------------------------------
+
+  const register = async ({
+    username,
+    email,
+    password,
+  }) => {
     const res = await authService.register({
       username,
       email,
@@ -177,12 +245,19 @@ export default function AuthProvider({ children }) {
     return userData;
   };
 
+  // ---------------------------------------------------------
+  // LOGOUT
+  // ---------------------------------------------------------
+
   const logout = async () => {
     try {
-      if (socket) socket.disconnect();
+      if (socket) {
+        socket.disconnect();
+      }
+
       await authService.logout();
     } catch (error) {
-      console.error(error);
+      console.error("Logout error:", error);
     }
 
     clearAuthData();

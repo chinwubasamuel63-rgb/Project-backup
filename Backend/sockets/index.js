@@ -59,10 +59,11 @@ const checkRateLimit = (socketId, eventType) => {
 export const initializeSocket = (server) => {
   io = new Server(server, {
     cors: {
-      origin: process.env.CLIENT_URL || "http://localhost:5173",
-      methods: ["GET", "POST", "PUT", "PATCH", "DELETE"],
-      credentials: true, // Required to allow cookies/auth headers from frontend
+      origin: "https://devstream-nexus.vercel.app",
+      methods: ["GET", "POST"],
+      credentials: true,
     },
+    transports: ["polling", "websocket"],
   });
 
   // JWT authentication middleware for socket connections
