@@ -18,6 +18,12 @@ export const getMyProjects = async () => {
   return data;
 };
 
+export const getUserProjects = async (userId) => {
+  const { data } = await api.get(`/projects/user/${userId}`);
+
+  return data;
+};
+
 export const createProject = async (projectData) => {
   const { data } = await api.post("/projects", projectData, {
     headers: {

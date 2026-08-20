@@ -115,8 +115,6 @@ export const createProject = async (req, res) => {
       project,
     });
   } catch (error) {
-    ;
-
     res.status(500).json({
       success: false,
       message: error.message,
@@ -367,8 +365,6 @@ export const updateProject = async (req, res) => {
       project,
     });
   } catch (error) {
-    ;
-
     res.status(500).json({
       success: false,
       message: error.message,
@@ -698,9 +694,7 @@ export const uploadProjectImages = async (req, res) => {
     for (const publicId of uploadedPublicIds) {
       try {
         await cloudinary.uploader.destroy(publicId);
-      } catch (cleanupError) {
-        ;
-      }
+      } catch (cleanupError) {}
     }
 
     res.status(500).json({
@@ -799,6 +793,39 @@ export const getMyProjects = async (req, res) => {
         { members: req.user._id },
         { coOwners: req.user._id },
       ],
+    })
+      .populate("owner", "name username avatar")
+      .populate("members", "name username avatar")
+      .populate("coOwners", "name username avatar")
+      .sort({ createdAt: -1 });
+
+    res.status(200).json({
+      success: true,
+      count: projects.length,
+      projects,
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
+export const getUserProjects = async (req, res) => {
+  try {
+    const { userId } = req.params;
+
+    if (!mongoose.Types.ObjectId.isValid(userId)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid user ID",
+      });
+    }
+
+    const projects = await Project.find({
+      visibility: "Public",
+      $or: [{ owner: userId }, { members: userId }, { coOwners: userId }],
     })
       .populate("owner", "name username avatar")
       .populate("members", "name username avatar")

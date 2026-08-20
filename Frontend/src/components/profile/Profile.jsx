@@ -14,7 +14,7 @@ import { getMyProducts } from "../../services/productService";
 import { getProfileActivity } from "../../services/profileActivityService";
 import { getMyJobs } from "../../services/jobService";
 import { getMyStreams } from "../../services/streamService";
-import { getMyProjects } from "../../services/projectService";
+import { getMyProjects, getUserProjects } from "../../services/projectService";
 import "./profile.css";
 
 function useTilt(ref, strength = 10) {
@@ -160,21 +160,32 @@ export default function Profile({ notify }) {
   }, [socket, profile?._id]);
 
   useEffect(() => {
+    let active = true;
+
     const loadProjects = async () => {
       try {
         setProjectsLoading(true);
+        setProjects([]);
         const data = userId
-          ? await getMyProjects(userId)
+          ? await getUserProjects(userId)
           : await getMyProjects();
-        setProjects(data.projects || []);
+        if (active) {
+          setProjects(data.projects || []);
+        }
       } catch (error) {
         console.error("Projects loading failed", error);
       } finally {
-        setProjectsLoading(false);
+        if (active) {
+          setProjectsLoading(false);
+        }
       }
     };
 
-    loadProjects();
+    void loadProjects();
+
+    return () => {
+      active = false;
+    };
   }, [userId]);
 
   useEffect(() => {

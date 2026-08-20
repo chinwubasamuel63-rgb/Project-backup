@@ -13,6 +13,7 @@ import {
   uploadProjectImages,
   deleteProjectImage,
   getMyProjects,
+  getUserProjects,
 } from "../controllers/projectController.js";
 
 const router = express.Router();
@@ -35,6 +36,7 @@ router.post(
 );
 router.get("/", getProjects);
 router.get("/my-projects", protect, getMyProjects);
+router.get("/user/:userId", getUserProjects);
 router.delete(
   "/:projectId/members/:userId",
   protect,
