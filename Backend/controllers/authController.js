@@ -71,9 +71,7 @@ export const registerUser = async (req, res) => {
         subject: "Welcome to DevStream Nexus",
         html: welcomeEmail(user.username),
       });
-    } catch (error) {
-      ;
-    }
+    } catch (error) {}
     // AUTO LOGIN AFTER REGISTER
     const accessToken = generateAccessToken(user._id);
 
@@ -92,8 +90,8 @@ export const registerUser = async (req, res) => {
     res.cookie("accessToken", accessToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
-      maxAge: 15 * 60 * 1000, // 15 mins
+      sameSite: "none",
+      maxAge: 15 * 60 * 1000,
     });
 
     res.status(201).json({
@@ -185,8 +183,8 @@ export const loginUser = async (req, res) => {
     res.cookie("accessToken", accessToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
-      maxAge: 15 * 60 * 1000, // 15 mins
+      sameSite: "none",
+      maxAge: 15 * 60 * 1000,
     });
 
     res.status(200).json({
@@ -383,7 +381,7 @@ export const refreshAccessToken = async (req, res) => {
     res.cookie("accessToken", accessToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
+      sameSite: "none",
       maxAge: 15 * 60 * 1000,
     });
 
@@ -413,7 +411,7 @@ export const logoutUser = async (req, res) => {
     res.clearCookie("accessToken", {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
+      sameSite: "none",
     });
 
     res.status(200).json({
