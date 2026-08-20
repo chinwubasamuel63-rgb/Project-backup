@@ -1,5 +1,5 @@
 import express from "express";
-import { handleLivekitWebhook } from "../controllers/livekitWebhook.controller.js";
+import { handleLivekitWebhook } from "../controllers/Livekitwebhook.controller.js";
 
 const router = express.Router();
 
