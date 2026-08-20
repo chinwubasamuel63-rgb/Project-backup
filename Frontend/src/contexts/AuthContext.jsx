@@ -4,9 +4,9 @@ import * as authService from "../services/authService";
 import { AuthContext } from "./AuthContext.js";
 
 // Socket.IO connects to the server origin, while REST calls use the /api path.
-const SOCKET_URL = (
-  import.meta.env.VITE_API_URL || "http://localhost:5000"
-).replace(/\/api\/?$/, "");
+const SOCKET_URL =
+  import.meta.env.VITE_SOCKET_URL ||
+  "https://devstream-nexus.onrender.com";
 
 export default function AuthProvider({ children }) {
   const [socket, setSocket] = useState(null);
