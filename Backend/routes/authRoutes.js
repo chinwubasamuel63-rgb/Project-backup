@@ -4,6 +4,7 @@ import passport from "passport";
 import RefreshToken from "../models/refreshToken.model.js";
 import { generateRefreshToken } from "../utils/token.utils.js";
 import { refreshCookieOptions } from "../utils/cookie.utils.js";
+
 import {
   registerUser,
   loginUser,
@@ -17,14 +18,25 @@ import {
 
 const router = express.Router();
 
+// ---------------------------------------------------------
+// LOCAL AUTH
+// ---------------------------------------------------------
+
 router.post("/register", registerUser);
+
 router.post("/login", loginUser);
+
+// ---------------------------------------------------------
+// GOOGLE
+// ---------------------------------------------------------
+
 router.get(
   "/google",
   passport.authenticate("google", {
     scope: ["profile", "email"],
   }),
 );
+
 router.get(
   "/google/callback",
   passport.authenticate("google", {
@@ -32,25 +44,37 @@ router.get(
     failureRedirect: `${process.env.CLIENT_URL}/login`,
   }),
   async (req, res) => {
-    const refreshToken = generateRefreshToken();
+    try {
+      const refreshToken = generateRefreshToken();
 
-    await RefreshToken.create({
-      user: req.user._id,
-      token: refreshToken,
-      expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
-    });
+      await RefreshToken.create({
+        user: req.user._id,
+        token: refreshToken,
+        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+      });
 
-    res.cookie("refreshToken", refreshToken, refreshCookieOptions);
+      res.cookie("refreshToken", refreshToken, refreshCookieOptions);
 
-    res.redirect(`${process.env.CLIENT_URL}/oauth-success`);
+      res.redirect(`${process.env.CLIENT_URL}/oauth-success`);
+    } catch (error) {
+      console.error("Google OAuth callback error:", error);
+
+      res.redirect(`${process.env.CLIENT_URL}/login`);
+    }
   },
 );
+
+// ---------------------------------------------------------
+// GITHUB
+// ---------------------------------------------------------
+
 router.get(
   "/github",
   passport.authenticate("github", {
     scope: ["user:email"],
   }),
 );
+
 router.get(
   "/github/callback",
   passport.authenticate("github", {
@@ -71,17 +95,31 @@ router.get(
 
       res.redirect(`${process.env.CLIENT_URL}/oauth-success`);
     } catch (error) {
-      ;
+      console.error("GitHub OAuth callback error:", error);
 
       res.redirect(`${process.env.CLIENT_URL}/login`);
     }
   },
 );
+
+// ---------------------------------------------------------
+// TOKEN
+// ---------------------------------------------------------
+
 router.post("/refresh", refreshAccessToken);
+
 router.post("/logout", logoutUser);
+
 router.get("/me", protect, getCurrentUser);
+
 router.get("/socket-token", protect, getSocketToken);
+
+// ---------------------------------------------------------
+// PASSWORD
+// ---------------------------------------------------------
+
 router.post("/forgot-password", forgotPassword);
+
 router.post("/reset-password/:token", resetPassword);
 
 export default router;
