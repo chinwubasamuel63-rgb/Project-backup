@@ -1,6 +1,7 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { getMyTickets } from "../../services/supportService";
+import { useAuth } from "../../hooks/useAuth";
 import { ChevronIcon, PlusIcon } from "../../data/MockSupportData";
 import "./support.css";
 
@@ -83,22 +84,51 @@ export function SupportStudent({ notify }) {
   const [loadingTickets, setLoadingTickets] = useState(true);
 
   const navigate = useNavigate();
+  const { socket } = useAuth();
+
+  const loadTickets = useCallback(async () => {
+    try {
+      setLoadingTickets(true);
+      const data = await getMyTickets();
+      setTickets(data.tickets || []);
+    } catch (error) {
+      showNotify(error.response?.data?.message || "Failed loading tickets");
+    } finally {
+      setLoadingTickets(false);
+    }
+  }, [showNotify]);
 
   useEffect(() => {
-    const loadTickets = async () => {
-      try {
-        setLoadingTickets(true);
-        const data = await getMyTickets();
-        setTickets(data.tickets || []);
-      } catch (error) {
-        showNotify(error.response?.data?.message || "Failed loading tickets");
-      } finally {
-        setLoadingTickets(false);
-      }
+    void loadTickets();
+
+    const handleWindowFocus = () => {
+      void loadTickets();
     };
 
-    loadTickets();
-  }, [showNotify]);
+    window.addEventListener("focus", handleWindowFocus);
+
+    return () => window.removeEventListener("focus", handleWindowFocus);
+  }, [loadTickets]);
+
+  useEffect(() => {
+    if (!socket) return undefined;
+
+    const handleStatusUpdate = (event) => {
+      if (!event?.ticket?._id) return;
+
+      setTickets((currentTickets) =>
+        currentTickets.map((ticket) =>
+          String(ticket._id) === String(event.ticket._id)
+            ? event.ticket
+            : ticket,
+        ),
+      );
+    };
+
+    socket.on("support:status-updated", handleStatusUpdate);
+
+    return () => socket.off("support:status-updated", handleStatusUpdate);
+  }, [socket]);
 
   const openTickets = tickets.filter(
     (ticket) => ticket.status === "Open",

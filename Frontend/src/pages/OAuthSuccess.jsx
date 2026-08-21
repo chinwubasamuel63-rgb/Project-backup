@@ -16,11 +16,11 @@ export default function OAuthSuccess() {
 
         const accessToken = refreshRes.data.accessToken;
 
-        const userRes = await authService.getCurrentUser(accessToken);
+        const userRes = await authService.getCurrentUser();
 
         const user = userRes.data.user;
 
-        setAuthData(user);
+        setAuthData(user, accessToken);
 
         switch (user.role) {
           case "admin":

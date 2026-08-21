@@ -22,7 +22,11 @@ API.interceptors.response.use(
       originalRequest._retry = true;
 
       try {
-        await API.post("/auth/refresh");
+        const refreshResponse = await API.post("/auth/refresh");
+
+        if (refreshResponse.data.accessToken) {
+          localStorage.setItem("accessToken", refreshResponse.data.accessToken);
+        }
 
         return API(originalRequest);
       } catch (refreshError) {

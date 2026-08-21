@@ -230,7 +230,11 @@ export default function AuthProvider({ children }) {
          *
          * Axios has withCredentials:true.
          */
-        await authService.refreshToken();
+        const refreshResponse = await authService.refreshToken();
+
+        if (refreshResponse.data.accessToken) {
+          localStorage.setItem("accessToken", refreshResponse.data.accessToken);
+        }
 
         const userRes = await authService.getCurrentUser();
 

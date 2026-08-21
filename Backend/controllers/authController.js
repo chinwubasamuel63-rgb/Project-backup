@@ -100,7 +100,7 @@ export const registerUser = async (req, res) => {
       message: "User registered successfully",
 
       accessToken,
-      
+
       user: {
         id: user._id,
         username: user.username,
@@ -396,6 +396,7 @@ export const refreshAccessToken = async (req, res) => {
 
     res.status(200).json({
       success: true,
+      accessToken,
     });
   } catch (error) {
     res.status(500).json({
