@@ -21,7 +21,7 @@ export function LoginPanel() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
   const navigate = useNavigate();
-  const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
+  const API_URL = "/api";
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -47,11 +47,11 @@ export function LoginPanel() {
   };
 
   const handleGoogleLogin = () => {
-    window.location.href = `${API_URL}/auth/google`;
+    window.location.href = "/api/auth/google";
   };
 
   const handleGithubLogin = () => {
-    window.location.href = `${API_URL}/auth/github`;
+    window.location.href = "/api/auth/github";
   };
 
   const handleRegister = async (e) => {
